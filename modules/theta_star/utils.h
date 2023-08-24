@@ -17,11 +17,13 @@ struct Point {
     bool enabled = true;
 
     OAHashMap<int64_t, Point<VectorType>*> neighbors = 4u;
-    OAHashMap<int64_t, Point<VectorType>*> unlinked_neighbors = 4u;
 
-    Point<VectorType>* prevous_point_3d = nullptr;
+    Point<VectorType>* prevous_point = nullptr;
     real_t cost_from_start = 0;
     real_t cost_from_target = 0;
+
+    Point<VectorType>() {}
+    ~Point<VectorType>() {}
 };
 
 };

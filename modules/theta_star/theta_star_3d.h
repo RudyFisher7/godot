@@ -2,6 +2,9 @@
 #define THETA_STAR_3D_H
 
 
+//rudy todo:: scons theta_star_shared=no platform=windows tests=no 
+
+
 #include "core/object/ref_counted.h"
 
 #include "utils.h"
@@ -18,24 +21,33 @@ protected:
     static void _bind_methods();
 
 
-    Vector3i _size;
+    Vector3i size;
     OAHashMap<int64_t, Point<Vector3i>*> _points;
 
 
 public:
+    static Ref<ThetaStar3D> create(const Vector3i in_size);
+    
+    Vector3i get_size() const;
+    TypedArray<Vector3i> get_points() const;
+    PackedInt64Array get_id_path(const Vector3i from, const Vector3i to);
+    TypedArray<Vector3i> get_point_path(const Vector3i from, const Vector3i to);
+
+    void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
+
     bool add_point(const Vector3i position, const real_t weight_scale = 1.0);
     bool connect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false);
-    PackedVector3Array get_points() const;
 
-    PackedInt64Array get_id_path(const Vector3i from, const Vector3i to) const;
-
-    ThetaStar3D(const Vector3i in_size = Vector3i(8, 8, 8));
+    ThetaStar3D();
+    ThetaStar3D(const Vector3i in_size);
     virtual ~ThetaStar3D();
 
 protected:
-    int64_t _hash_position(const Vector3i position) const;
+    virtual int64_t _hash_position(const Vector3i position) const;
+    bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
+    void _connect_bidirectional_neighbors_in_grid(const int64_t from_id, Point<Vector3i>* from_point, const TypedArray<Vector3i> in_neighbors);
 
-    void _clear();
+    virtual void _clear();
 };
 
 };
