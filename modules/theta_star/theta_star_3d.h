@@ -23,12 +23,16 @@ protected:
 
     Vector3i size;
     OAHashMap<int64_t, Point<Vector3i>*> _points;
+    uint8_t closed_counter = 0u;
 
 
 public:
     static Ref<ThetaStar3D> create(const Vector3i in_size);
     
     Vector3i get_size() const;
+    int64_t get_point_id(const Vector3i position) const;
+    Vector3i get_point_position(const int64_t id) const;
+    int64_t get_point_hash(const Vector3i position) const;
     TypedArray<Vector3i> get_points() const;
     PackedInt64Array get_id_path(const Vector3i from, const Vector3i to);
     TypedArray<Vector3i> get_point_path(const Vector3i from, const Vector3i to);
@@ -47,7 +51,13 @@ protected:
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
     void _connect_bidirectional_neighbors_in_grid(const int64_t from_id, Point<Vector3i>* from_point, const TypedArray<Vector3i> in_neighbors);
 
+    PackedInt64Array _get_id_path(Point<Vector3i>* const from, Point<Vector3i>* const to);
+    TypedArray<Vector3i> _get_position_path(const int64_t from, const int64_t to);
+
+    real_t _estimate_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const;
+
     virtual void _clear();
+    bool _is_position_valid(const Vector3i position) const;
 };
 
 };
