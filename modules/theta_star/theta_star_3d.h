@@ -56,6 +56,7 @@ protected:
 
     PackedInt64Array _get_id_path(Point<Vector3i>* const from, Point<Vector3i>* const to);
     TypedArray<Vector3i> _get_position_path(const int64_t from, const int64_t to);
+    void _expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);
 
     real_t _compute_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const;
     real_t _estimate_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const;

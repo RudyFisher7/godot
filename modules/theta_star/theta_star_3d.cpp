@@ -311,35 +311,7 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
 
             current->closed_counter = closed_counter;
 
-            for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = current->neighbors.iter(); it.valid; it = current->neighbors.next_iter(it)) {
-                Point<Vector3i>* const current_neighbor = *it.value;
-
-                real_t neighbor_cost_from_start = current->cost_from_start + _compute_edge_cost(current, current_neighbor);
-
-                bool use_neighbor_for_path_finding = current_neighbor->enabled;
-
-                if (use_neighbor_for_path_finding) {
-                    use_neighbor_for_path_finding = (
-                            neighbor_cost_from_start < current_neighbor->cost_from_start
-                            || current_neighbor->opened_counter != closed_counter
-                    );
-                }
-
-                if (use_neighbor_for_path_finding) {
-                    current_neighbor->cost_from_start = neighbor_cost_from_start;
-                    current_neighbor->cost_to_target = _estimate_edge_cost(current_neighbor, to);
-                    current_neighbor->prevous_point = current;
-
-                    if (current_neighbor->opened_counter != closed_counter) {
-                        open.push_back(current_neighbor);
-                        current_neighbor->opened_counter = closed_counter;
-
-                        sorter.push_heap(0, open.size() - 1, 0, current_neighbor, open.ptr());
-                    } else {
-                        sorter.push_heap(0, open.find(current_neighbor), 0, current_neighbor, open.ptr());
-                    }
-                }
-            }
+            _expand_point(current, to, open, sorter);
         }
     }
 
@@ -359,6 +331,39 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
 
 TypedArray<Vector3i> ThetaStar3D::_get_position_path(const int64_t from, const int64_t to) {
     return TypedArray<Vector3i>();
+}
+
+
+void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter) {
+    for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
+        Point<Vector3i>* const neighbor = *it.value;
+
+        real_t neighbor_cost_from_start = point->cost_from_start + _compute_edge_cost(point, neighbor);
+
+        bool use_neighbor_for_path_finding = neighbor->enabled;
+
+        if (use_neighbor_for_path_finding) {
+            use_neighbor_for_path_finding = (
+                    neighbor_cost_from_start < neighbor->cost_from_start
+                    || neighbor->opened_counter != closed_counter
+            );
+        }
+
+        if (use_neighbor_for_path_finding) {
+            neighbor->cost_from_start = neighbor_cost_from_start;
+            neighbor->cost_to_target = _estimate_edge_cost(neighbor, to);
+            neighbor->prevous_point = point;
+
+            if (neighbor->opened_counter != closed_counter) {
+                open.push_back(neighbor);
+                neighbor->opened_counter = closed_counter;
+
+                sorter.push_heap(0, open.size() - 1, 0, neighbor, open.ptr());
+            } else {
+                sorter.push_heap(0, open.find(neighbor), 0, neighbor, open.ptr());
+            }
+        }
+    }
 }
 
 
