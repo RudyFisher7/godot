@@ -1,4 +1,4 @@
-#include "theta_star_3d.h"
+#include "modules/theta_star/theta_star_3d.h"
 
 
 namespace ThetaStar {
@@ -7,9 +7,11 @@ namespace ThetaStar {
 void ThetaStar3D::_bind_methods() {
     ClassDB::bind_static_method("ThetaStar3D", D_METHOD("create", "in_size"), &ThetaStar3D::create);
     ClassDB::bind_method(D_METHOD("get_size"), &ThetaStar3D::get_size);
+    ClassDB::bind_method(D_METHOD("get_capacity"), &ThetaStar3D::get_capacity);
     ClassDB::bind_method(D_METHOD("get_point_id", "position"), &ThetaStar3D::get_point_id);
     ClassDB::bind_method(D_METHOD("get_point_position", "id"), &ThetaStar3D::get_point_position);
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
+    ClassDB::bind_method(D_METHOD("is_point_valid_for_hashing", "position"), &ThetaStar3D::is_point_valid_for_hashing);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
     ClassDB::bind_method(D_METHOD("get_id_path", "from", "to"), &ThetaStar3D::get_id_path);
     ClassDB::bind_method(D_METHOD("get_point_path", "from", "to"), &ThetaStar3D::get_point_path);
@@ -35,7 +37,12 @@ Vector3i ThetaStar3D::get_size() const {
 }
 
 
-int64_t ThetaStar3D::get_point_id(const Vector3i position) const {
+int64_t ThetaStar3D::get_capacity() const {
+    return static_cast<int64_t>(_points.get_capacity());
+}
+
+
+int64_t ThetaStar3D::get_point_id(const Vector3i position) {
     int64_t result = -1;
     int64_t id = -1;
     
@@ -65,10 +72,9 @@ Vector3i ThetaStar3D::get_point_position(const int64_t id) const {
 }
 
 
-int64_t ThetaStar3D::get_point_hash(const Vector3i position) const {
+int64_t ThetaStar3D::get_point_hash(const Vector3i position) {
     int64_t result = -1;
     bool is_position_valid = false;
-    int64_t id = -1;
     
     is_position_valid = _is_position_valid(position);
     if (is_position_valid) {
@@ -76,6 +82,11 @@ int64_t ThetaStar3D::get_point_hash(const Vector3i position) const {
     }
     
     return result;
+}
+
+
+bool ThetaStar3D::is_point_valid_for_hashing(const Vector3i position) const {
+    return _is_position_valid(position);
 }
 
 
@@ -135,19 +146,14 @@ void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
             }
         }
     }
+
+    if (in_neighbors.is_empty()) {
+        _build_default_neighbors(in_neighbors);
+    }
     
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
 		const int64_t id = *it.key;
         Point<Vector3i>* point = *it.value;
-
-        if (in_neighbors.is_empty()) {
-            in_neighbors.push_back(Vector3i(0, 0, 1));
-            in_neighbors.push_back(Vector3i(0, 0, -1));
-            in_neighbors.push_back(Vector3i(1, 0, 0));
-            in_neighbors.push_back(Vector3i(-1, 0, 0));
-            in_neighbors.push_back(Vector3i(0, 1, 0));
-            in_neighbors.push_back(Vector3i(0, -1, 0));
-        }
         
         _connect_bidirectional_neighbors_in_grid(id, point, in_neighbors);
 	}
@@ -196,15 +202,33 @@ ThetaStar3D::ThetaStar3D() {
 
 
 ThetaStar3D::ThetaStar3D(const Vector3i in_size) {
-    ERR_FAIL_MSG(vformat("ThetaStar3D's size must be set to a Vector with all positive values. size = %v", in_size));
-
+    ERR_FAIL_COND_MSG(!ThetaStar3D::_is_size_valid(in_size), vformat("ThetaStar3D's size must be set to a Vector with all positive values. size = %v", in_size));
+    
     size = in_size;
-    _points.reserve(size.x * size.y * size.z);
+
+    uint32_t capacity = size.x * size.y * size.z;
+
+    if (capacity > _points.get_capacity()) {
+        _points.reserve(capacity);
+    }
 }
 
 
 ThetaStar3D::~ThetaStar3D() {
     _clear();
+}
+
+
+bool ThetaStar3D::_is_size_valid(const Vector3i& in_size) {
+    bool result = false;
+
+    result = (
+            in_size.x > 0
+            && in_size.y > 0
+            && in_size.z > 0
+    );
+
+    return result;
 }
 
 
@@ -267,6 +291,7 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
     PackedInt64Array result;
     LocalVector<Point<Vector3i>*> open;
     SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator> sorter;
+    bool is_path_found = false;
 
     closed_counter++;
 
@@ -275,12 +300,12 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
 
     open.push_back(from);
 
-    while (!open.is_empty()) {
+    while (!is_path_found && !open.is_empty()) {
         Point<Vector3i>* current = open[0];
 
-        if (current == to) {
-            //then done
-        } else {
+        is_path_found = current == to;
+
+        if (!is_path_found) {
             sorter.pop_heap(0, open.size(), open.ptr());
             open.remove_at(open.size() - 1);
 
@@ -289,14 +314,20 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
             for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = current->neighbors.iter(); it.valid; it = current->neighbors.next_iter(it)) {
                 Point<Vector3i>* const current_neighbor = *it.value;
 
-                real_t current_cost_from_start = current->cost_from_start + _estimate_edge_cost(current, current_neighbor);
+                real_t neighbor_cost_from_start = current->cost_from_start + _compute_edge_cost(current, current_neighbor);
 
-                if (
-                        current_neighbor->enabled 
-                        && (current_neighbor->opened_counter != closed_counter
-                        || current_cost_from_start < current_neighbor->cost_from_start)
-                ) {
-                    current_neighbor->cost_from_start = current_cost_from_start;
+                bool use_neighbor_for_path_finding = current_neighbor->enabled;
+
+                if (use_neighbor_for_path_finding) {
+                    use_neighbor_for_path_finding = (
+                            neighbor_cost_from_start < current_neighbor->cost_from_start
+                            || current_neighbor->opened_counter != closed_counter
+                    );
+                }
+
+                if (use_neighbor_for_path_finding) {
+                    current_neighbor->cost_from_start = neighbor_cost_from_start;
+                    current_neighbor->cost_to_target = _estimate_edge_cost(current_neighbor, to);
                     current_neighbor->prevous_point = current;
 
                     if (current_neighbor->opened_counter != closed_counter) {
@@ -331,6 +362,20 @@ TypedArray<Vector3i> ThetaStar3D::_get_position_path(const int64_t from, const i
 }
 
 
+real_t ThetaStar3D::_compute_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const {
+    real_t result = 0.0;
+    int32_t unweighted_result = 0;
+
+    unweighted_result = abs(from->position.x - to->position.x);
+    unweighted_result += abs(from->position.y - to->position.y);
+    unweighted_result += abs(from->position.z - to->position.z);
+
+    result = static_cast<real_t>(unweighted_result) * to->weight_scale;
+
+    return result;
+}
+
+
 real_t ThetaStar3D::_estimate_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const {
     real_t result = 0.0;
 
@@ -361,6 +406,16 @@ bool ThetaStar3D::_is_position_valid(const Vector3i position) const {
     result = true;
 
     return result;
+}
+
+
+void ThetaStar3D::_build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const {
+    out_neighbors.push_back(Vector3i(0, 0, 1));
+    out_neighbors.push_back(Vector3i(0, 0, -1));
+    out_neighbors.push_back(Vector3i(1, 0, 0));
+    out_neighbors.push_back(Vector3i(-1, 0, 0));
+    out_neighbors.push_back(Vector3i(0, 1, 0));
+    out_neighbors.push_back(Vector3i(0, -1, 0));
 }
 
 };
