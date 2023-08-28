@@ -5,7 +5,8 @@ namespace ThetaStar {
 
 
 void ThetaStar3D::_bind_methods() {
-    ClassDB::bind_static_method("ThetaStar3D", D_METHOD("create", "in_size"), &ThetaStar3D::create);
+    ClassDB::bind_static_method("ThetaStar3D", D_METHOD("create", "in_dimensions", "reserve"), &ThetaStar3D::create, DEFVAL(false));
+    ClassDB::bind_method(D_METHOD("get_dimensions"), &ThetaStar3D::get_dimensions);
     ClassDB::bind_method(D_METHOD("get_size"), &ThetaStar3D::get_size);
     ClassDB::bind_method(D_METHOD("get_capacity"), &ThetaStar3D::get_capacity);
     ClassDB::bind_method(D_METHOD("get_point_id", "position"), &ThetaStar3D::get_point_id);
@@ -13,27 +14,39 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
     ClassDB::bind_method(D_METHOD("is_point_valid_for_hashing", "position"), &ThetaStar3D::is_point_valid_for_hashing);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
+    ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
     ClassDB::bind_method(D_METHOD("get_id_path", "from", "to"), &ThetaStar3D::get_id_path);
     ClassDB::bind_method(D_METHOD("get_point_path", "from", "to"), &ThetaStar3D::get_point_path);
     ClassDB::bind_method(D_METHOD("build_bidirectional_grid", "in_neighbors"), &ThetaStar3D::build_bidirectional_grid, DEFVAL(TypedArray<Vector3i>()));
     ClassDB::bind_method(D_METHOD("add_point", "position", "weight_scale"), &ThetaStar3D::add_point);
     ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points);
 
-    ClassDB::bind_method(D_METHOD("_hash_position", "position"), &ThetaStar3D::_hash_position);
+    GDVIRTUAL_BIND(_hash_position, "position");
+    GDVIRTUAL_BIND(_compute_edge_cost, "from", "to");
+    GDVIRTUAL_BIND(_estimate_edge_cost, "from", "to");
 
 
-    ADD_PROPERTY(PropertyInfo(Variant::VECTOR3I, "size"), "", "get_size");
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR3I, "dimensions"), "", "get_dimensions");
 }
 
 
-Ref<ThetaStar3D> ThetaStar3D::create(const Vector3i in_size) {
-    Ref<ThetaStar3D> result = memnew(ThetaStar3D(in_size));
+Ref<ThetaStar3D> ThetaStar3D::create(const Vector3i in_dimensions, const bool reserve) {
+    Ref<ThetaStar3D> result = memnew(ThetaStar3D(in_dimensions, reserve));
     return result;
 }
 
 
-Vector3i ThetaStar3D::get_size() const {
-    return size;
+Vector3i ThetaStar3D::get_dimensions() const {
+    return dimensions;
+}
+
+
+int64_t ThetaStar3D::get_size() const {
+    int64_t result = 0;
+    result = static_cast<int64_t>(dimensions.x);
+    result *= static_cast<int64_t>(dimensions.y);
+    result *= static_cast<int64_t>(dimensions.z);
+    return result;
 }
 
 
@@ -100,6 +113,13 @@ TypedArray<Vector3i> ThetaStar3D::get_points() const {
     return vectors;
 }
 
+
+void ThetaStar3D::reserve(const uint32_t new_capacity) {
+
+    _points.reserve(new_capacity);
+}
+
+
 PackedInt64Array ThetaStar3D::get_id_path(const Vector3i from, const Vector3i to) {
     PackedInt64Array result;
     bool is_from_valid = false;
@@ -139,9 +159,9 @@ TypedArray<Vector3i> ThetaStar3D::get_point_path(const Vector3i from, const Vect
 
 
 void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
-    for (int32_t x = 0; x < size.x; x++) {
-        for (int32_t y = 0; y < size.y; y++) {
-            for (int32_t z = 0; z < size.z; z++) {
+    for (int32_t x = 0; x < dimensions.x; x++) {
+        for (int32_t y = 0; y < dimensions.y; y++) {
+            for (int32_t z = 0; z < dimensions.z; z++) {
                 add_point(Vector3i(x, y, z));
             }
         }
@@ -197,19 +217,29 @@ bool ThetaStar3D::connect_points(const Vector3i from, const Vector3i to, const b
 
 
 ThetaStar3D::ThetaStar3D() {
-    ERR_FAIL_MSG("ThetaStar3D can't be created directly. Use create() method.");
+    if (
+            GDVIRTUAL_IS_OVERRIDDEN(_hash_position)
+            || GDVIRTUAL_IS_OVERRIDDEN(_compute_edge_cost)
+            || GDVIRTUAL_IS_OVERRIDDEN(_estimate_edge_cost)
+    ) {
+        //todo::
+    } else {
+        ERR_FAIL_MSG("ThetaStar3D can't be created directly. Use create() method.");
+    }
 }
 
 
-ThetaStar3D::ThetaStar3D(const Vector3i in_size) {
-    ERR_FAIL_COND_MSG(!ThetaStar3D::_is_size_valid(in_size), vformat("ThetaStar3D's size must be set to a Vector with all positive values. size = %v", in_size));
+ThetaStar3D::ThetaStar3D(const Vector3i in_dimensions, const bool reserve) {
+    ERR_FAIL_COND_MSG(!ThetaStar3D::_are_dimensions_valid(in_dimensions), vformat("ThetaStar3D's dimensions must be set to a Vector with all positive values. dimensions = %v", in_dimensions));
     
-    size = in_size;
+    dimensions = in_dimensions;
 
-    uint32_t capacity = size.x * size.y * size.z;
+    if (reserve) {
+        uint32_t capacity = dimensions.x * dimensions.y * dimensions.z;
 
-    if (capacity > _points.get_capacity()) {
-        _points.reserve(capacity);
+        if (capacity > _points.get_capacity()) {
+            _points.reserve(capacity);
+        }
     }
 }
 
@@ -219,23 +249,14 @@ ThetaStar3D::~ThetaStar3D() {
 }
 
 
-bool ThetaStar3D::_is_size_valid(const Vector3i& in_size) {
+bool ThetaStar3D::_are_dimensions_valid(const Vector3i& in_dimensions) {
     bool result = false;
 
     result = (
-            in_size.x > 0
-            && in_size.y > 0
-            && in_size.z > 0
+            in_dimensions.x > 0
+            && in_dimensions.y > 0
+            && in_dimensions.z > 0
     );
-
-    return result;
-}
-
-
-int64_t ThetaStar3D::_hash_position(const Vector3i position) const {
-    int64_t result = 0;
-
-    result = position.x + (size.x * position.y) + (size.x * size.y * position.z);
 
     return result;
 }
@@ -296,7 +317,7 @@ PackedInt64Array ThetaStar3D::_get_id_path(Point<Vector3i>* const from, Point<Ve
     closed_counter++;
 
     from->cost_from_start = 0;
-    from->cost_to_target = _estimate_edge_cost(from, to);
+    from->cost_to_target = _estimate_edge_cost(from->id, to->id);
 
     open.push_back(from);
 
@@ -338,7 +359,7 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
         Point<Vector3i>* const neighbor = *it.value;
 
-        real_t neighbor_cost_from_start = point->cost_from_start + _compute_edge_cost(point, neighbor);
+        real_t neighbor_cost_from_start = point->cost_from_start + _compute_edge_cost(point->id, neighbor->id);
 
         bool use_neighbor_for_path_finding = neighbor->enabled;
 
@@ -351,7 +372,7 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
 
         if (use_neighbor_for_path_finding) {
             neighbor->cost_from_start = neighbor_cost_from_start;
-            neighbor->cost_to_target = _estimate_edge_cost(neighbor, to);
+            neighbor->cost_to_target = _estimate_edge_cost(neighbor->id, to->id);
             neighbor->prevous_point = point;
 
             if (neighbor->opened_counter != closed_counter) {
@@ -367,27 +388,61 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
 }
 
 
-real_t ThetaStar3D::_compute_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const {
-    real_t result = 0.0;
-    int32_t unweighted_result = 0;
+int64_t ThetaStar3D::_hash_position(Vector3i position) {
+    int64_t result = 0;
 
-    unweighted_result = abs(from->position.x - to->position.x);
-    unweighted_result += abs(from->position.y - to->position.y);
-    unweighted_result += abs(from->position.z - to->position.z);
+    if (GDVIRTUAL_CALL(_hash_position, position, result)) {
+        return result;
+    }
 
-    result = static_cast<real_t>(unweighted_result) * to->weight_scale;
+    result = position.x + (dimensions.x * position.y) + (dimensions.x * dimensions.y * position.z);
 
     return result;
 }
 
 
-real_t ThetaStar3D::_estimate_edge_cost(const Point<Vector3i>* const from, const Point<Vector3i>* const to) const {
+real_t ThetaStar3D::_compute_edge_cost(int64_t from, int64_t to) {
     real_t result = 0.0;
 
-    Vector3 from_position = Vector3(from->position);
-    Vector3 to_position = Vector3(to->position);
+    if (GDVIRTUAL_CALL(_compute_edge_cost, from, to, result)) {
+        return result;
+    }
 
-    result = from_position.distance_to(to_position) * to->weight_scale;
+    int32_t unweighted_result = 0;
+
+    Point<Vector3i>* from_point;
+    Point<Vector3i>* to_point;
+
+    _points.lookup(from, from_point);
+    _points.lookup(to, to_point);
+
+    unweighted_result = abs(from_point->position.x - to_point->position.x);
+    unweighted_result += abs(from_point->position.y - to_point->position.y);
+    unweighted_result += abs(from_point->position.z - to_point->position.z);
+
+    result = static_cast<real_t>(unweighted_result) * to_point->weight_scale;
+
+    return result;
+}
+
+
+real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) {
+    real_t result = 0.0;
+
+    if (GDVIRTUAL_CALL(_estimate_edge_cost, from, to, result)) {
+        return result;
+    }
+
+    Point<Vector3i>* from_point;
+    Point<Vector3i>* to_point;
+
+    _points.lookup(from, from_point);
+    _points.lookup(to, to_point);
+
+    Vector3 from_position = Vector3(from_point->position);
+    Vector3 to_position = Vector3(to_point->position);
+
+    result = from_position.distance_to(to_position) * to_point->weight_scale;
 
     return result;
 }
@@ -403,10 +458,10 @@ void ThetaStar3D::_clear() {
 bool ThetaStar3D::_is_position_valid(const Vector3i position) const {
     bool result = false;
     Vector3i min = Vector3i(0, 0, 0);
-    Vector3i max = size - Vector3i(1, 1, 1);
+    Vector3i max = dimensions - Vector3i(1, 1, 1);
     Vector3i clamped_position = position.clamp(min, max);
 
-    ERR_FAIL_COND_V_MSG(position != clamped_position, result, vformat("Point's position must be non-negative and within size. position = %v", position));
+    ERR_FAIL_COND_V_MSG(position != clamped_position, result, vformat("Point's position must be non-negative and within dimensions. position = %v", position));
 
     result = true;
 

@@ -26,11 +26,11 @@ namespace TestThetaStar {
 
                     Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(size_for_hash_tests);
 
-                    Vector3i size = t->get_size();
-                    int record_size = static_cast<size_t>(size.x * size.y * size.z);
+                    Vector3i size = t->get_dimensions();
+                    int record_count = static_cast<int>(size.x * size.y * size.z);
                     Vector<uint8_t> record_of_hashes = Vector<uint8_t>();
                     
-                    record_of_hashes.resize(record_size);
+                    record_of_hashes.resize(record_count);
                     record_of_hashes.fill(0u);
 
                     for (int32_t point_x = 0; point_x < size.x; point_x++) {
@@ -63,7 +63,7 @@ namespace TestThetaStar {
             Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(Vector3i(0, 0, 0));
 
             CHECK(t != nullptr);
-            CHECK(t->get_size() == Vector3i(1, 1, 1));
+            CHECK(t->get_dimensions() == Vector3i(1, 1, 1));
 
             memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
         }
@@ -91,7 +91,7 @@ namespace TestThetaStar {
         Ref<ThetaStar::ThetaStar3D> t = memnew(ThetaStar::ThetaStar3D);
 
         CHECK(t != nullptr);
-        CHECK(t->get_size() == Vector3i(1, 1, 1));
+        CHECK(t->get_dimensions() == Vector3i(1, 1, 1));
 
         memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
     }
