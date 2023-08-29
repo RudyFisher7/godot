@@ -14,12 +14,15 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
     ClassDB::bind_method(D_METHOD("is_point_valid_for_hashing", "position"), &ThetaStar3D::is_point_valid_for_hashing);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
+    ClassDB::bind_method(D_METHOD("get_point_connections", "position"), &ThetaStar3D::get_point_connections);
     ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
     ClassDB::bind_method(D_METHOD("get_id_path", "from", "to"), &ThetaStar3D::get_id_path);
     ClassDB::bind_method(D_METHOD("get_point_path", "from", "to"), &ThetaStar3D::get_point_path);
     ClassDB::bind_method(D_METHOD("build_bidirectional_grid", "in_neighbors"), &ThetaStar3D::build_bidirectional_grid, DEFVAL(TypedArray<Vector3i>()));
-    ClassDB::bind_method(D_METHOD("add_point", "position", "weight_scale"), &ThetaStar3D::add_point);
-    ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points);
+    ClassDB::bind_method(D_METHOD("add_point", "position", "weight_scale"), &ThetaStar3D::add_point, DEFVAL(1.0));
+    ClassDB::bind_method(D_METHOD("remove_point", "position"), &ThetaStar3D::remove_point);
+    ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points, DEFVAL(false));
+    ClassDB::bind_method(D_METHOD("disconnect_points", "from", "to", "bidirectional"), &ThetaStar3D::disconnect_points, DEFVAL(false));
 
     GDVIRTUAL_BIND(_hash_position, "position");
     GDVIRTUAL_BIND(_compute_edge_cost, "from", "to");
@@ -73,12 +76,10 @@ Vector3i ThetaStar3D::get_point_position(const int64_t id) const {
     Vector3i result;
     Point<Vector3i>* point = nullptr;
 
-    if (_points.has(id)) {
-        _points.lookup(id, point);
-
+    if (_points.lookup(id, point)) {
         result = point->position;
     } else {
-        result = Vector3i(-1, -1, -1);
+        result = Vector3i(-1, -1, -1); //todo:: this is not a valid error return case if overridden in GDScript
     }
 
     return result;
@@ -89,7 +90,7 @@ int64_t ThetaStar3D::get_point_hash(const Vector3i position) {
     int64_t result = -1;
     bool is_position_valid = false;
     
-    is_position_valid = _is_position_valid(position);
+    is_position_valid = _is_position_valid(position, true);
     if (is_position_valid) {
         result = _hash_position(position);
     }
@@ -114,6 +115,21 @@ TypedArray<Vector3i> ThetaStar3D::get_points() const {
 }
 
 
+TypedArray<Vector3i> ThetaStar3D::get_point_connections(const Vector3i position) {
+    TypedArray<Vector3i> vectors;
+    Point<Vector3i>* point = nullptr;
+    int64_t id = _hash_position(position);
+
+    if (_points.lookup(id, point)) {
+        for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
+            vectors.push_back((*(it.value))->position);
+        }
+    }
+    
+    return vectors;
+}
+
+
 void ThetaStar3D::reserve(const uint32_t new_capacity) {
 
     _points.reserve(new_capacity);
@@ -129,8 +145,8 @@ PackedInt64Array ThetaStar3D::get_id_path(const Vector3i from, const Vector3i to
     Point<Vector3i>* from_point = nullptr;
     Point<Vector3i>* to_point = nullptr;
 
-    is_from_valid = _is_position_valid(from);
-    is_to_valid = _is_position_valid(to);
+    is_from_valid = _is_position_valid(from, true);
+    is_to_valid = _is_position_valid(to, true);
 
     if (is_from_valid && is_to_valid) {
         from_id = _hash_position(from);
@@ -172,10 +188,9 @@ void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
     }
     
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
-		const int64_t id = *it.key;
         Point<Vector3i>* point = *it.value;
         
-        _connect_bidirectional_neighbors_in_grid(id, point, in_neighbors);
+        _connect_bidirectional_neighbors_in_grid(point, in_neighbors);
 	}
 }
 
@@ -183,7 +198,7 @@ void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
 bool ThetaStar3D::add_point(const Vector3i position, const real_t weight_scale) {
     bool result = false;
     
-    result = _is_position_valid(position);
+    result = _is_position_valid(position, true);
 
     if (result) {
         result = weight_scale >= 0.0;
@@ -204,28 +219,64 @@ bool ThetaStar3D::add_point(const Vector3i position, const real_t weight_scale) 
 }
 
 
+bool ThetaStar3D::remove_point(const Vector3i position) {
+    bool result = false;
+    
+    result = _is_position_valid(position);
+
+    if (result) {
+        int64_t id = _hash_position(position);
+
+        Point<Vector3i>* point = nullptr;
+        result = _points.lookup(id, point);
+
+        if (result) {
+            for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
+                (*it.value)->neighbors.remove(id);
+            }
+
+            memdelete(point);
+            _points.remove(id);
+        }
+    }
+
+    return result;
+}
+
+
 bool ThetaStar3D::connect_points(const Vector3i from, const Vector3i to, const bool bidirectional) {
     bool result = false;
 
-    int64_t from_id = _hash_position(from);
-    int64_t to_id = _hash_position(to);
+    bool is_from_valid = _is_position_valid(from, true);
+    bool is_to_valid = _is_position_valid(to, true);
 
-    result = _connect_points(from_id, to_id, bidirectional);
+    result = is_from_valid && is_to_valid;
+
+    if (result) {
+        int64_t from_id = _hash_position(from);
+        int64_t to_id = _hash_position(to);
+
+        result = _connect_points(from_id, to_id, bidirectional);
+    }
     
     return result;
 }
 
 
-ThetaStar3D::ThetaStar3D() {
-    if (
-            GDVIRTUAL_IS_OVERRIDDEN(_hash_position)
-            || GDVIRTUAL_IS_OVERRIDDEN(_compute_edge_cost)
-            || GDVIRTUAL_IS_OVERRIDDEN(_estimate_edge_cost)
-    ) {
-        //todo::
-    } else {
-        ERR_FAIL_MSG("ThetaStar3D can't be created directly. Use create() method.");
-    }
+bool ThetaStar3D::disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional) {
+    bool result = false;
+
+    // int64_t from_id = _hash_position(from);
+    // int64_t to_id = _hash_position(to);
+
+    // result = _connect_points(from_id, to_id, bidirectional);
+    
+    return result;
+}
+
+
+ThetaStar3D::ThetaStar3D() { // todo:: inheritance stuff
+    ERR_FAIL_MSG("ThetaStar3D can't be created directly. Use create() method.");
 }
 
 
@@ -276,32 +327,36 @@ bool ThetaStar3D::_connect_points(const int64_t from_id, const int64_t to_id, co
 
     result = true;
 
-    from_point->neighbors.insert(to_id, to_point);
+    from_point->neighbors.set(to_id, to_point);
 
     if (bidirectional)
     {
-        to_point->neighbors.insert(from_id, from_point);
+        to_point->neighbors.set(from_id, from_point);
     }
     
     return result;
 }
 
 
-void ThetaStar3D::_connect_bidirectional_neighbors_in_grid(const int64_t from_id, Point<Vector3i>* from_point, const TypedArray<Vector3i> in_neighbors) {
+void ThetaStar3D::_connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors) {
     for (size_t i = 0; i < in_neighbors.size(); i++) {
-        const int64_t neighbor_id = _hash_position(from_point->position + in_neighbors[i]);
+        const Vector3i neighbor_position = from_point->position + in_neighbors[i];
 
-        if (_points.has(neighbor_id)) {
+        bool is_neighbor_position_valid = _is_position_valid(neighbor_position);
+
+        if (is_neighbor_position_valid) {
+            const int64_t neighbor_id = _hash_position(neighbor_position);
             Point<Vector3i>* neighbor_point = nullptr;
 
-            _points.lookup(neighbor_id, neighbor_point);
-            
-            if (!from_point->neighbors.has(neighbor_id)) {
-                from_point->neighbors.insert(neighbor_id, neighbor_point);
-            }
+            if (_points.lookup(neighbor_id, neighbor_point)) {
+                Vector3 p = Vector3(from_point->position.x, from_point->position.y, from_point->position.z);
+                Vector3 n = Vector3(neighbor_point->position.x, neighbor_point->position.y, neighbor_point->position.z);
+                if (p.distance_to(n) > 1.1) {
+                    print_line(vformat("from = %v, to = %v, neighbor = %v", from_point->position, neighbor_point->position, in_neighbors[i]));
+                }
 
-            if (!neighbor_point->neighbors.has(from_id)) {
-                neighbor_point->neighbors.insert(from_id, from_point);
+                from_point->neighbors.set(neighbor_id, neighbor_point);
+                neighbor_point->neighbors.set(from_point->id, from_point);
             }
         }
     }
@@ -455,15 +510,17 @@ void ThetaStar3D::_clear() {
 }
 
 
-bool ThetaStar3D::_is_position_valid(const Vector3i position) const {
+bool ThetaStar3D::_is_position_valid(const Vector3i position, bool warn) const {
     bool result = false;
     Vector3i min = Vector3i(0, 0, 0);
     Vector3i max = dimensions - Vector3i(1, 1, 1);
-    Vector3i clamped_position = position.clamp(min, max);
+    Vector3i clamped_position = position.clamp(min, max);\
+    
+    result = position == clamped_position;
 
-    ERR_FAIL_COND_V_MSG(position != clamped_position, result, vformat("Point's position must be non-negative and within dimensions. position = %v", position));
-
-    result = true;
+    if (warn) {
+        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's position must be non-negative and within dimensions. position = %v", position));
+    }
 
     return result;
 }

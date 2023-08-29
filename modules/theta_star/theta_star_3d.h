@@ -36,6 +36,7 @@ public:
     int64_t get_point_hash(const Vector3i position);
     bool is_point_valid_for_hashing(const Vector3i position) const;
     TypedArray<Vector3i> get_points() const;
+    TypedArray<Vector3i> get_point_connections(const Vector3i position);
     void reserve(const uint32_t new_capacity);
     PackedInt64Array get_id_path(const Vector3i from, const Vector3i to);
     TypedArray<Vector3i> get_point_path(const Vector3i from, const Vector3i to);
@@ -43,7 +44,10 @@ public:
     void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
     bool add_point(const Vector3i position, const real_t weight_scale = 1.0);
+    bool remove_point(const Vector3i position); //todo:: unit test for sure
+
     bool connect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false);
+    bool disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false); //todo:: implement and unit test
 
     ThetaStar3D();
     ThetaStar3D(const Vector3i in_dimensions, const bool reserve = false);
@@ -52,7 +56,7 @@ public:
 protected:
     static bool _are_dimensions_valid(const Vector3i& in_dimensions);
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
-    void _connect_bidirectional_neighbors_in_grid(const int64_t from_id, Point<Vector3i>* from_point, const TypedArray<Vector3i> in_neighbors);
+    void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
 
     PackedInt64Array _get_id_path(Point<Vector3i>* const from, Point<Vector3i>* const to);
     TypedArray<Vector3i> _get_position_path(const int64_t from, const int64_t to);
@@ -67,7 +71,8 @@ protected:
 	GDVIRTUAL2RC(real_t, _estimate_edge_cost, int64_t, int64_t)
 
     virtual void _clear();
-    bool _is_position_valid(const Vector3i position) const;
+    
+    bool _is_position_valid(const Vector3i position, bool warn = false) const;
 
     void _build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const;
 };
