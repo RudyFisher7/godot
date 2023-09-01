@@ -17,9 +17,6 @@ class ThetaStar3D: public RefCounted {
     GDCLASS(ThetaStar3D, RefCounted);
 
 protected:
-    static void _bind_methods();
-
-
     Vector3i dimensions = Vector3i(1, 1, 1);
     OAHashMap<int64_t, Point<Vector3i>*> _points;
     uint8_t closed_counter = 0u;
@@ -27,9 +24,17 @@ protected:
 
 public:
     static Ref<ThetaStar3D> create(const Vector3i in_dimensions, const bool reserve = false);
+
+    ThetaStar3D();
+    ThetaStar3D(const Vector3i in_dimensions, const bool reserve = false);
+    virtual ~ThetaStar3D();
     
+    void reserve(const uint32_t new_capacity);
+
     Vector3i get_dimensions() const;
     int64_t get_size() const;
+    int64_t get_point_count() const;
+    bool is_empty() const;
     int64_t get_capacity() const;
     int64_t get_point_id(const Vector3i position);
     Vector3i get_point_position(const int64_t id) const;
@@ -37,9 +42,11 @@ public:
     bool is_point_valid_for_hashing(const Vector3i position) const;
     TypedArray<Vector3i> get_points() const;
     TypedArray<Vector3i> get_point_connections(const Vector3i position);
-    void reserve(const uint32_t new_capacity);
-    PackedInt64Array get_id_path(const Vector3i from, const Vector3i to);
-    TypedArray<Vector3i> get_point_path(const Vector3i from, const Vector3i to);
+
+    PackedInt64Array get_id_path_from_positions(const Vector3i from, const Vector3i to);
+    TypedArray<Vector3i> get_point_path_from_positions(const Vector3i from, const Vector3i to);
+    PackedInt64Array get_id_path_from_ids(const int64_t from, const int64_t to);
+    TypedArray<Vector3i> get_point_path_from_ids(const int64_t from, const int64_t to);
 
     void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
@@ -49,16 +56,15 @@ public:
     bool connect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false);
     bool disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false); //todo:: implement and unit test
 
-    ThetaStar3D();
-    ThetaStar3D(const Vector3i in_dimensions, const bool reserve = false);
-    virtual ~ThetaStar3D();
 
 protected:
+    static void _bind_methods();
     static bool _are_dimensions_valid(const Vector3i& in_dimensions);
+
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
     void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
 
-    PackedInt64Array _get_id_path(Point<Vector3i>* const from, Point<Vector3i>* const to);
+    void _get_point_path(Point<Vector3i>* const from, Point<Vector3i>* const to, LocalVector<const Point<Vector3i>*>& outPath);
     TypedArray<Vector3i> _get_position_path(const int64_t from, const int64_t to);
     void _expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);
 
