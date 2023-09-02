@@ -474,11 +474,6 @@ void ThetaStar3D::_get_point_path(Point<Vector3i>* const from, Point<Vector3i>* 
 }
 
 
-TypedArray<Vector3i> ThetaStar3D::_get_position_path(const int64_t from, const int64_t to) {
-    return TypedArray<Vector3i>();
-}
-
-
 void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter) {
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
         Point<Vector3i>* const neighbor = *it.value;
@@ -509,6 +504,93 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
             }
         }
     }
+}
+
+
+bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
+    bool result = false;
+
+    int32_t from_x = from.x;
+    int32_t from_y = from.y;
+    int32_t from_z = from.z;
+
+    int32_t to_x = to.x;
+    int32_t to_y = to.y;
+    int32_t to_z = to.z;
+
+    int32_t distance_x = from_x - to_x;
+    int32_t distance_y = from_y - to_y;
+    int32_t distance_z = from_z - to_z;
+
+    int32_t sign_x = 1;
+    int32_t sign_y = 1;
+    int32_t sign_z = 1;
+
+    int64_t balance_keeper = 0;
+
+    bool no_collision = true;
+
+    if (distance_x < 0) {
+        distance_x = -distance_x;
+        sign_x = -1;
+    }
+
+    if (distance_y < 0) {
+        distance_y = -distance_y;
+        sign_y = -1;
+    }
+
+    if (distance_z < 0) {
+        distance_z = -distance_z;
+        sign_z = -1;
+    }
+
+    if (distance_x >= distance_y) {
+        while (no_collision && from_x != to_x) {
+            balance_keeper += distance_y;
+
+            const Vector3i test_is_blocking = Vector3i(from_x + ((sign_x - 1) / 2), from_y + ((sign_y - 1) / 2), from_z + ((sign_z - 1) / 2));
+            int64_t test_id = _hash_position(test_is_blocking);
+            Point<Vector3i>* test_point = nullptr;
+
+            if (balance_keeper >= distance_x) {
+                no_collision = _points.lookup(test_id, test_point) && test_point->enabled;
+                if (no_collision) {
+                    from_y += sign_y;
+                    balance_keeper -= distance_x;
+                }
+            }
+
+            const Vector3i test_is_blocking_2 = Vector3i(from_x + ((sign_x - 1) / 2), from_y, from_z + ((sign_z - 1) / 2));
+            int64_t test_id_2 = _hash_position(test_is_blocking_2);
+            Point<Vector3i>* test_point_2 = nullptr;
+
+            const Vector3i test_is_blocking_3 = Vector3i(from_x + ((sign_x - 1) / 2), from_y - 1, from_z + ((sign_z - 1) / 2));
+            int64_t test_id_3 = _hash_position(test_is_blocking_3);
+            Point<Vector3i>* test_point_3 = nullptr;
+
+            if (no_collision) {
+                if (balance_keeper != 0) {
+                    no_collision = _points.lookup(test_id, test_point) && test_point->enabled;
+                }
+            }
+
+            if (no_collision) {
+                if (distance_y == 0) {
+                    no_collision = (
+                            (_points.lookup(test_id_2, test_point_2) && test_point_2->enabled)
+                            && (_points.lookup(test_id_3, test_point_3) && test_point_3->enabled)
+                    );
+                }
+            }
+
+            from_x += sign_x;
+        }
+    }
+
+    result = no_collision;
+
+    return result;
 }
 
 

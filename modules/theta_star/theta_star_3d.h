@@ -65,9 +65,9 @@ protected:
     void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
 
     void _get_point_path(Point<Vector3i>* const from, Point<Vector3i>* const to, LocalVector<const Point<Vector3i>*>& outPath);
-    TypedArray<Vector3i> _get_position_path(const int64_t from, const int64_t to);
     void _expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);
-
+    
+    virtual bool _has_line_of_sight(Vector3i from, Vector3i to);
     virtual int64_t _hash_position(Vector3i position);
     virtual real_t _compute_edge_cost(int64_t from, int64_t to);
     virtual real_t _estimate_edge_cost(int64_t from, int64_t to);
