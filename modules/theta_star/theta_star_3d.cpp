@@ -363,6 +363,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("disconnect_points", "from", "to", "bidirectional"), &ThetaStar3D::disconnect_points, DEFVAL(false));
 
+    GDVIRTUAL_BIND(_has_line_of_sight, "from", "to");
     GDVIRTUAL_BIND(_hash_position, "position");
     GDVIRTUAL_BIND(_compute_edge_cost, "from", "to");
     GDVIRTUAL_BIND(_estimate_edge_cost, "from", "to");
@@ -507,6 +508,47 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
 }
 
 
+bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
+    bool result = true;
+
+    int64_t id_to_check_1 = _hash_position(args.voxel_to_check_1);
+    Point<Vector3i>* point_to_check_1 = nullptr;
+
+    int64_t id_to_check_2 = _hash_position(args.voxel_to_check_2);
+    Point<Vector3i>* point_to_check_2 = nullptr;
+
+    int64_t id_to_check_3 = _hash_position(args.voxel_to_check_3);
+    Point<Vector3i>* point_to_check_3 = nullptr;
+
+    args.balance += args.get_small_axis_distance();
+    
+    if (args.balance >= args.get_big_axis_distance()) {
+        result = _points.lookup(id_to_check_1, point_to_check_1) && point_to_check_1->enabled; 
+        if (result) {
+            args.small_axis_from += args.get_small_axis_sign();
+            args.balance -= args.get_big_axis_distance();
+        }
+    }
+
+    if (result) {
+        if (args.balance != 0) {
+            result = _points.lookup(id_to_check_1, point_to_check_1) && point_to_check_1->enabled;
+        }
+    }
+
+    if (result) {
+        if (args.get_small_axis_distance() == 0) {
+            result = (
+                    (_points.lookup(id_to_check_2, point_to_check_2) && point_to_check_2->enabled)
+                    && (_points.lookup(id_to_check_3, point_to_check_3) && point_to_check_3->enabled)
+            );
+        }
+    }
+
+    return result;
+}
+
+
 bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     bool result = false;
 
@@ -526,8 +568,6 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     int32_t sign_y = 1;
     int32_t sign_z = 1;
 
-    int64_t balance_keeper = 0;
-
     bool no_collision = true;
 
     if (distance_x < 0) {
@@ -545,46 +585,153 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
         sign_z = -1;
     }
 
-    if (distance_x >= distance_y) {
+    if (distance_x >= distance_y && distance_x >= distance_z) {
+        LineOfSightArguments y_args(
+                from.y,
+                distance_x,
+                distance_y,
+                sign_y
+        );
+
+        LineOfSightArguments z_args(
+                from.z,
+                distance_x,
+                distance_z,
+                sign_z
+        );
+
         while (no_collision && from_x != to_x) {
-            balance_keeper += distance_y;
+            Vector3i tmp;
 
-            const Vector3i test_is_blocking = Vector3i(from_x + ((sign_x - 1) / 2), from_y + ((sign_y - 1) / 2), from_z + ((sign_z - 1) / 2));
-            int64_t test_id = _hash_position(test_is_blocking);
-            Point<Vector3i>* test_point = nullptr;
+            tmp.x = from.x + ((sign_x - 1) / 2); // checked twice? redundant?
+            tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
+            tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
+            y_args.voxel_to_check_1 = tmp;
 
-            if (balance_keeper >= distance_x) {
-                no_collision = _points.lookup(test_id, test_point) && test_point->enabled;
-                if (no_collision) {
-                    from_y += sign_y;
-                    balance_keeper -= distance_x;
-                }
-            }
+            tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign();
+            y_args.voxel_to_check_2 = tmp;
 
-            const Vector3i test_is_blocking_2 = Vector3i(from_x + ((sign_x - 1) / 2), from_y, from_z + ((sign_z - 1) / 2));
-            int64_t test_id_2 = _hash_position(test_is_blocking_2);
-            Point<Vector3i>* test_point_2 = nullptr;
+            tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign() - 1;
+            y_args.voxel_to_check_3 = tmp;
 
-            const Vector3i test_is_blocking_3 = Vector3i(from_x + ((sign_x - 1) / 2), from_y - 1, from_z + ((sign_z - 1) / 2));
-            int64_t test_id_3 = _hash_position(test_is_blocking_3);
-            Point<Vector3i>* test_point_3 = nullptr;
+
+            tmp.x = from.x + ((sign_x - 1) / 2); // checked twice? redundant?
+            tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
+            tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
+            z_args.voxel_to_check_1 = tmp;
+
+            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign();
+            z_args.voxel_to_check_2 = tmp;
+
+            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign() - 1;
+            z_args.voxel_to_check_3 = tmp;
+
+            no_collision = _has_line_of_sight_helper(y_args);
 
             if (no_collision) {
-                if (balance_keeper != 0) {
-                    no_collision = _points.lookup(test_id, test_point) && test_point->enabled;
-                }
-            }
-
-            if (no_collision) {
-                if (distance_y == 0) {
-                    no_collision = (
-                            (_points.lookup(test_id_2, test_point_2) && test_point_2->enabled)
-                            && (_points.lookup(test_id_3, test_point_3) && test_point_3->enabled)
-                    );
-                }
+                no_collision = _has_line_of_sight_helper(z_args);
             }
 
             from_x += sign_x;
+        }
+
+    } else if (distance_y >= distance_x && distance_y >= distance_z) {
+        LineOfSightArguments x_args(
+                from.x,
+                distance_y,
+                distance_x,
+                sign_x
+        );
+
+        LineOfSightArguments z_args(
+                from.z,
+                distance_y,
+                distance_z,
+                sign_z
+        );
+
+        while (no_collision && from_y != to_y) {
+            Vector3i tmp;
+
+            tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
+            tmp.y = from.y + ((sign_y - 1) / 2);
+            tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
+            x_args.voxel_to_check_1 = tmp;
+
+            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign();
+            x_args.voxel_to_check_2 = tmp;
+
+            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign() - 1;
+            x_args.voxel_to_check_3 = tmp;
+
+
+            tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
+            tmp.y = from.y + ((sign_y - 1) / 2);
+            tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
+            z_args.voxel_to_check_1 = tmp;
+
+            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign();
+            z_args.voxel_to_check_2 = tmp;
+
+            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign() - 1;
+            z_args.voxel_to_check_3 = tmp;
+
+            no_collision = _has_line_of_sight_helper(x_args);
+
+            if (no_collision) {
+                no_collision = _has_line_of_sight_helper(z_args);
+            }
+
+            from_y += sign_y;
+        }
+
+    } else if (distance_z >= distance_x && distance_z >= distance_y) {
+        LineOfSightArguments x_args(
+                from.x,
+                distance_z,
+                distance_x,
+                sign_x
+        );
+
+        LineOfSightArguments y_args(
+                from.y,
+                distance_z,
+                distance_y,
+                sign_y
+        );
+
+        while (no_collision && from_z != to_z) {
+            Vector3i tmp;
+
+            tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
+            tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
+            tmp.z = from.z + ((sign_z - 1) / 2);
+            x_args.voxel_to_check_1 = tmp;
+
+            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign();
+            x_args.voxel_to_check_2 = tmp;
+
+            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign() - 1;
+            x_args.voxel_to_check_3 = tmp;
+
+            tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
+            tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
+            tmp.z = from.z + ((sign_z - 1) / 2);
+            y_args.voxel_to_check_1 = tmp;
+
+            tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign();
+            y_args.voxel_to_check_2 = tmp;
+
+            tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign() - 1;
+            y_args.voxel_to_check_3 = tmp;
+
+            no_collision = _has_line_of_sight_helper(x_args);
+
+            if (no_collision) {
+                no_collision = _has_line_of_sight_helper(y_args);
+            }
+
+            from_z += sign_z;
         }
     }
 

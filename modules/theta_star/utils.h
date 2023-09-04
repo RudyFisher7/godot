@@ -50,6 +50,39 @@ struct Point {
     }
 };
 
+
+struct LineOfSightArguments {
+public:
+    int64_t balance = 0;
+    int32_t small_axis_from = 0;
+
+    Vector3i voxel_to_check_1;
+    Vector3i voxel_to_check_2;
+    Vector3i voxel_to_check_3;
+
+private:
+    int32_t big_axis_distance = 0;
+    int32_t small_axis_distance = 0;
+    int8_t small_axis_sign = 1;
+
+public:
+    LineOfSightArguments(
+            const int32_t in_small_axis_from,
+            const int32_t in_big_axis_distance,
+            const int32_t in_small_axis_distance,
+            const int8_t in_small_axis_sign
+    ) {
+        small_axis_from = in_small_axis_from;
+        big_axis_distance = in_big_axis_distance;
+        small_axis_distance = in_small_axis_distance;
+        small_axis_sign = in_small_axis_sign;
+    }
+
+    const int32_t& get_big_axis_distance() const { return big_axis_distance; }
+    const int32_t& get_small_axis_distance() const { return small_axis_distance; }
+    const int8_t& get_small_axis_sign() const { return small_axis_sign; }
+};
+
 };
 
 
