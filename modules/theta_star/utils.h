@@ -1,5 +1,5 @@
-#ifndef NAV_VOLUME_UTILS_H
-#define NAV_VOLUME_UTILS_H
+#ifndef THETA_STAR_UTILS_H
+#define THETA_STAR_UTILS_H
 
 
 #include "core/object/script_language.h"
@@ -86,4 +86,4 @@ public:
 };
 
 
-#endif // NAV_VOLUME_UTILS_H
+#endif // THETA_STAR_UTILS_H

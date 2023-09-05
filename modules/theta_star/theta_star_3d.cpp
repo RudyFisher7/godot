@@ -479,30 +479,40 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
         Point<Vector3i>* const neighbor = *it.value;
 
-        real_t neighbor_cost_from_start = point->cost_from_start + _compute_edge_cost(point->id, neighbor->id);
+        if (_has_line_of_sight(point->prevous_point->position, neighbor->position)) {
+            _expand_point_helper(point->prevous_point, neighbor, to, open, sorter);
 
-        bool use_neighbor_for_path_finding = neighbor->enabled;
-
-        if (use_neighbor_for_path_finding) {
-            use_neighbor_for_path_finding = (
-                    neighbor_cost_from_start < neighbor->cost_from_start
-                    || neighbor->opened_counter != closed_counter
-            );
+        } else {
+            _expand_point_helper(point, neighbor, to, open, sorter);
         }
+    }
+}
 
-        if (use_neighbor_for_path_finding) {
-            neighbor->cost_from_start = neighbor_cost_from_start;
-            neighbor->cost_to_target = _estimate_edge_cost(neighbor->id, to->id);
-            neighbor->prevous_point = point;
 
-            if (neighbor->opened_counter != closed_counter) {
-                open.push_back(neighbor);
-                neighbor->opened_counter = closed_counter;
+void ThetaStar3D::_expand_point_helper(Point<Vector3i>* const previous_point, Point<Vector3i>* const neighbor, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter) {
+    real_t neighbor_cost_from_start = previous_point->cost_from_start + _compute_edge_cost(previous_point->id, neighbor->id);
 
-                sorter.push_heap(0, open.size() - 1, 0, neighbor, open.ptr());
-            } else {
-                sorter.push_heap(0, open.find(neighbor), 0, neighbor, open.ptr());
-            }
+    bool use_neighbor_for_path_finding = neighbor->enabled;
+
+    if (use_neighbor_for_path_finding) {
+        use_neighbor_for_path_finding = (
+                neighbor_cost_from_start < neighbor->cost_from_start
+                || neighbor->opened_counter != closed_counter
+        );
+    }
+
+    if (use_neighbor_for_path_finding) {
+        neighbor->cost_from_start = neighbor_cost_from_start;
+        neighbor->cost_to_target = _estimate_edge_cost(neighbor->id, to->id);
+        neighbor->prevous_point = previous_point;
+
+        if (neighbor->opened_counter != closed_counter) {
+            open.push_back(neighbor);
+            neighbor->opened_counter = closed_counter;
+
+            sorter.push_heap(0, open.size() - 1, 0, neighbor, open.ptr());
+        } else {
+            sorter.push_heap(0, open.find(neighbor), 0, neighbor, open.ptr());
         }
     }
 }
