@@ -47,6 +47,8 @@ public:
     TypedArray<Vector3i> get_point_path_from_positions(const Vector3i from, const Vector3i to);
     PackedInt64Array get_id_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3i> get_point_path_from_ids(const int64_t from, const int64_t to);
+    TypedArray<Vector3> get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to);
+    // todo:: get point path from off-grid positions
 
     void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
@@ -63,6 +65,7 @@ protected:
 
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
     void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
+    Point<Vector3i>* _get_closest_point(const Vector3 from, const Vector3 to) const;
 
     void _get_point_path(Point<Vector3i>* const from, Point<Vector3i>* const to, LocalVector<const Point<Vector3i>*>& outPath);
     void _expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);

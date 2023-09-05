@@ -238,6 +238,38 @@ TypedArray<Vector3i> ThetaStar3D::get_point_path_from_ids(const int64_t from, co
 }
 
 
+TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to) {
+    TypedArray<Vector3> result;
+    LocalVector<const Point<Vector3i>*> result_points;
+    bool is_from_valid = false;
+    bool is_to_valid = false;
+    int64_t from_id = 0;
+    int64_t to_id = 0;
+    Point<Vector3i>* from_point = nullptr;
+    Point<Vector3i>* to_point = nullptr;
+
+    // todo:: get closest point
+
+    is_from_valid = _is_position_valid(from, true);
+    is_to_valid = _is_position_valid(to, true);
+
+    if (is_from_valid && is_to_valid) {
+        from_id = _hash_position(from);
+        to_id = _hash_position(to);
+
+        if (_points.lookup(from_id, from_point) && _points.lookup(to_id, to_point)) {
+            _get_point_path(from_point, to_point, result_points);
+        }
+    }
+
+    for (LocalVector<const Point<Vector3i>*>::Iterator it = result_points.begin(); it != result_points.end(); ++it) {
+        result.push_back(Vector3((*it)->position));
+    }
+
+    return result;
+}
+
+
 void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
     for (int32_t x = 0; x < dimensions.x; x++) {
         for (int32_t y = 0; y < dimensions.y; y++) {
@@ -357,6 +389,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_path_from_positions", "from", "to"), &ThetaStar3D::get_point_path_from_positions);
     ClassDB::bind_method(D_METHOD("get_id_path_from_ids", "from", "to"), &ThetaStar3D::get_id_path_from_ids);
     ClassDB::bind_method(D_METHOD("get_point_path_from_ids", "from", "to"), &ThetaStar3D::get_point_path_from_ids);
+    ClassDB::bind_method(D_METHOD("get_point_path_from_off_grid_positions", "from", "to"), &ThetaStar3D::get_point_path_from_off_grid_positions);
     ClassDB::bind_method(D_METHOD("build_bidirectional_grid", "in_neighbors"), &ThetaStar3D::build_bidirectional_grid, DEFVAL(TypedArray<Vector3i>()));
     ClassDB::bind_method(D_METHOD("add_point", "position", "weight_scale"), &ThetaStar3D::add_point, DEFVAL(1.0));
     ClassDB::bind_method(D_METHOD("remove_point", "position"), &ThetaStar3D::remove_point);
@@ -433,6 +466,18 @@ void ThetaStar3D::_connect_bidirectional_neighbors_in_grid(Point<Vector3i>* cons
             }
         }
     }
+}
+
+
+Point<Vector3i>* ThetaStar3D::_get_closest_point(const Vector3 from, const Vector3 to) const {
+    Point<Vector3i>* result = nullptr;
+    Vector3i from_rounded;
+
+    Vector3 direction_to = from.direction_to(to);
+
+    from_rounded.x = direction_to.x > 0 ? ceilf(from.x) : floorf(from.x);
+
+    return result;
 }
 
 
