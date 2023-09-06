@@ -116,6 +116,21 @@ bool ThetaStar3D::is_point_valid_for_hashing(const Vector3i position) const {
 }
 
 
+bool ThetaStar3D::is_point_disabled(const int64_t id) const {
+    bool result = false;
+
+    Point<Vector3i>* point = nullptr;
+
+    result = _points.lookup(id, point);
+
+    if (result) {
+        result = !point->enabled;
+    }
+
+    return result;
+}
+
+
 TypedArray<Vector3i> ThetaStar3D::get_points() const {
     TypedArray<Vector3i> vectors;
 
@@ -334,6 +349,29 @@ bool ThetaStar3D::remove_point(const Vector3i position) {
             memdelete(point);
             _points.remove(id);
         }
+    }
+
+    return result;
+}
+
+
+bool ThetaStar3D::disable_point_by_position(const Vector3i position, const bool disable) {
+    bool result = _is_position_valid(position, true);
+    if (result) {
+        result = disable_point_by_id(_hash_position(position));
+    }
+
+    return result;
+}
+
+
+bool ThetaStar3D::disable_point_by_id(const int64_t id, const bool disable) {
+    bool result = false;
+    Point<Vector3i>* point = nullptr;
+
+    if (_points.lookup(id, point)) {
+        point->enabled = disable;
+        result = true;
     }
 
     return result;
@@ -665,30 +703,24 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             y_args.voxel_to_check_1 = tmp;
-            print_line("tmp = ", tmp);
 
             tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign();
             y_args.voxel_to_check_2 = tmp;
-            print_line("tmp = ", tmp);
 
             tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign() - 1;
             y_args.voxel_to_check_3 = tmp;
-            print_line("tmp = ", tmp);
 
 
             tmp.x = from_x + ((sign_x - 1) / 2); // checked twice? redundant?
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             z_args.voxel_to_check_1 = tmp;
-            print_line("tmp = ", tmp);
 
             tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign();
             z_args.voxel_to_check_2 = tmp;
-            print_line("tmp = ", tmp);
 
             tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign() - 1;
             z_args.voxel_to_check_3 = tmp;
-            print_line("tmp = ", tmp);
 
             no_collision = _has_line_of_sight_helper(y_args);
 
@@ -697,8 +729,6 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             }
 
             from_x += sign_x;
-
-            print_line("from_x = ", from_x);
         }
 
     } else if (distance_y >= distance_x && distance_y >= distance_z) {

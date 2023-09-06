@@ -40,6 +40,7 @@ public:
     Vector3i get_point_position(const int64_t id) const;
     int64_t get_point_hash(const Vector3i position);
     bool is_point_valid_for_hashing(const Vector3i position) const;
+    bool is_point_disabled(const int64_t id) const;
     TypedArray<Vector3i> get_points() const;
     TypedArray<Vector3i> get_point_connections(const Vector3i position);
 
@@ -54,6 +55,9 @@ public:
 
     bool add_point(const Vector3i position, const real_t weight_scale = 1.0);
     bool remove_point(const Vector3i position); //todo:: unit test for sure
+
+    bool disable_point_by_position(const Vector3i position, const bool disable = true);
+    bool disable_point_by_id(const int64_t id, const bool disable = true);
 
     bool connect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false);
     bool disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false); //todo:: implement and unit test
