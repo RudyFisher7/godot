@@ -36,7 +36,7 @@ struct Point {
 
     // These variables are used for pathfinding and may be outdated if trying
     // to use between path solving queries.
-    Point<VectorType>* prevous_point = nullptr;
+    Point<VectorType>* previous_point = nullptr;
     real_t cost_from_start = 0; // g cost
     real_t cost_to_target = 0; // h cost
     uint8_t opened_counter = 0u;

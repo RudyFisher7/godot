@@ -511,7 +511,7 @@ void ThetaStar3D::_get_point_path(Point<Vector3i>* const from, Point<Vector3i>* 
     const Point<Vector3i>* point = to;
     while (point != from) {
         outPath.push_back(point);
-        point = point->prevous_point;
+        point = point->previous_point;
     }
 
     outPath.push_back(point);
@@ -524,8 +524,11 @@ void ThetaStar3D::_expand_point(Point<Vector3i>* const point, const Point<Vector
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = point->neighbors.iter(); it.valid; it = point->neighbors.next_iter(it)) {
         Point<Vector3i>* const neighbor = *it.value;
 
-        if (_has_line_of_sight(point->prevous_point->position, neighbor->position)) {
-            _expand_point_helper(point->prevous_point, neighbor, to, open, sorter);
+        if (    
+                point->previous_point != nullptr
+                && _has_line_of_sight(point->previous_point->position, neighbor->position)
+        ) {
+            _expand_point_helper(point->previous_point, neighbor, to, open, sorter);
 
         } else {
             _expand_point_helper(point, neighbor, to, open, sorter);
@@ -549,7 +552,7 @@ void ThetaStar3D::_expand_point_helper(Point<Vector3i>* const previous_point, Po
     if (use_neighbor_for_path_finding) {
         neighbor->cost_from_start = neighbor_cost_from_start;
         neighbor->cost_to_target = _estimate_edge_cost(neighbor->id, to->id);
-        neighbor->prevous_point = previous_point;
+        neighbor->previous_point = previous_point;
 
         if (neighbor->opened_counter != closed_counter) {
             open.push_back(neighbor);
@@ -615,9 +618,9 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     int32_t to_y = to.y;
     int32_t to_z = to.z;
 
-    int32_t distance_x = from_x - to_x;
-    int32_t distance_y = from_y - to_y;
-    int32_t distance_z = from_z - to_z;
+    int32_t distance_x = to_x - from_x;
+    int32_t distance_y = to_y - from_y;
+    int32_t distance_z = to_z - from_z;
 
     int32_t sign_x = 1;
     int32_t sign_y = 1;
@@ -658,28 +661,34 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
         while (no_collision && from_x != to_x) {
             Vector3i tmp;
 
-            tmp.x = from.x + ((sign_x - 1) / 2); // checked twice? redundant?
+            tmp.x = from_x + ((sign_x - 1) / 2); // checked twice? redundant?
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             y_args.voxel_to_check_1 = tmp;
+            print_line("tmp = ", tmp);
 
             tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign();
             y_args.voxel_to_check_2 = tmp;
+            print_line("tmp = ", tmp);
 
             tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign() - 1;
             y_args.voxel_to_check_3 = tmp;
+            print_line("tmp = ", tmp);
 
 
-            tmp.x = from.x + ((sign_x - 1) / 2); // checked twice? redundant?
+            tmp.x = from_x + ((sign_x - 1) / 2); // checked twice? redundant?
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             z_args.voxel_to_check_1 = tmp;
+            print_line("tmp = ", tmp);
 
             tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign();
             z_args.voxel_to_check_2 = tmp;
+            print_line("tmp = ", tmp);
 
             tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign() - 1;
             z_args.voxel_to_check_3 = tmp;
+            print_line("tmp = ", tmp);
 
             no_collision = _has_line_of_sight_helper(y_args);
 
@@ -688,6 +697,8 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             }
 
             from_x += sign_x;
+
+            print_line("from_x = ", from_x);
         }
 
     } else if (distance_y >= distance_x && distance_y >= distance_z) {
@@ -709,7 +720,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             Vector3i tmp;
 
             tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
-            tmp.y = from.y + ((sign_y - 1) / 2);
+            tmp.y = from_y + ((sign_y - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             x_args.voxel_to_check_1 = tmp;
 
@@ -721,7 +732,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
 
 
             tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
-            tmp.y = from.y + ((sign_y - 1) / 2);
+            tmp.y = from_y + ((sign_y - 1) / 2);
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             z_args.voxel_to_check_1 = tmp;
 
@@ -760,7 +771,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
 
             tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
-            tmp.z = from.z + ((sign_z - 1) / 2);
+            tmp.z = from_z + ((sign_z - 1) / 2);
             x_args.voxel_to_check_1 = tmp;
 
             tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign();
@@ -771,7 +782,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
 
             tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
             tmp.y = y_args.small_axis_from + ((y_args.get_small_axis_sign() - 1) / 2);
-            tmp.z = from.z + ((sign_z - 1) / 2);
+            tmp.z = from_z + ((sign_z - 1) / 2);
             y_args.voxel_to_check_1 = tmp;
 
             tmp.y = y_args.small_axis_from + y_args.get_small_axis_sign();
