@@ -111,7 +111,7 @@ int64_t ThetaStar3D::get_point_hash(const Vector3i position) {
 }
 
 
-bool ThetaStar3D::is_point_valid_for_hashing(const Vector3i position) const {
+bool ThetaStar3D::is_position_valid_for_hashing(const Vector3i position) const {
     return _is_position_valid(position);
 }
 
@@ -425,7 +425,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_id", "position"), &ThetaStar3D::get_point_id);
     ClassDB::bind_method(D_METHOD("get_point_position", "id"), &ThetaStar3D::get_point_position);
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
-    ClassDB::bind_method(D_METHOD("is_point_valid_for_hashing", "position"), &ThetaStar3D::is_point_valid_for_hashing);
+    ClassDB::bind_method(D_METHOD("is_position_valid_for_hashing", "position"), &ThetaStar3D::is_position_valid_for_hashing);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
     ClassDB::bind_method(D_METHOD("get_point_connections", "position"), &ThetaStar3D::get_point_connections);
     ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);

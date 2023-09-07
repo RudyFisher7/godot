@@ -10,7 +10,7 @@
 
 #include "core/templates/oa_hash_map.h"
 
-
+// final todos:: refactor to allow gdscript inheritance and allow negative vectors, possibly allow cell height width depth scaling?
 namespace ThetaStar {
 
 class ThetaStar3D: public RefCounted {
@@ -39,21 +39,23 @@ public:
     int64_t get_point_id(const Vector3i position);
     Vector3i get_point_position(const int64_t id) const;
     int64_t get_point_hash(const Vector3i position);
-    bool is_point_valid_for_hashing(const Vector3i position) const;
+    bool is_position_valid_for_hashing(const Vector3i position) const;
     bool is_point_disabled(const int64_t id) const;
+    // todo:: if keeping weight scale, get_point_weight_scale()
+
     TypedArray<Vector3i> get_points() const;
     TypedArray<Vector3i> get_point_connections(const Vector3i position);
 
+    // todo:: solve issue when 'to' is not reachable from 'from'
     PackedInt64Array get_id_path_from_positions(const Vector3i from, const Vector3i to);
     TypedArray<Vector3i> get_point_path_from_positions(const Vector3i from, const Vector3i to);
     PackedInt64Array get_id_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3i> get_point_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3> get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to);
-    // todo:: get point path from off-grid positions
 
     void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
-    bool add_point(const Vector3i position, const real_t weight_scale = 1.0);
+    bool add_point(const Vector3i position, const real_t weight_scale = 1.0); // todo:: does weight_scale even work with theta*?
     bool remove_point(const Vector3i position); //todo:: unit test for sure
 
     bool disable_point_by_position(const Vector3i position, const bool disable = true);
