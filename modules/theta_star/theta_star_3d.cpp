@@ -263,7 +263,8 @@ TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_grid_positions(const Ve
     Point<Vector3i>* from_point = nullptr;
     Point<Vector3i>* to_point = nullptr;
 
-    // todo:: get closest point
+    from_point = _get_closest_point_toward(from, to);
+    to_point = _get_closest_point_toward(to, from);
 
     is_from_valid = _is_position_valid(from, true);
     is_to_valid = _is_position_valid(to, true);
@@ -279,6 +280,11 @@ TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_grid_positions(const Ve
 
     for (LocalVector<const Point<Vector3i>*>::Iterator it = result_points.begin(); it != result_points.end(); ++it) {
         result.push_back(Vector3((*it)->position));
+    }
+
+    if (!result.is_empty()) {
+        result.insert(0, from);
+        result.insert(result.size() - 1, to);
     }
 
     return result;
@@ -507,13 +513,23 @@ void ThetaStar3D::_connect_bidirectional_neighbors_in_grid(Point<Vector3i>* cons
 }
 
 
-Point<Vector3i>* ThetaStar3D::_get_closest_point(const Vector3 from, const Vector3 to) const {
+Point<Vector3i>* ThetaStar3D::_get_closest_point_toward(const Vector3 from, const Vector3 to) {
     Point<Vector3i>* result = nullptr;
     Vector3i from_rounded;
-
+    int64_t from_id = -1;
     Vector3 direction_to = from.direction_to(to);
 
-    from_rounded.x = direction_to.x > 0 ? ceilf(from.x) : floorf(from.x);
+    from_rounded.x = direction_to.x > 0.0 ? ceilf(from.x) : floorf(from.x);
+    from_rounded.y = direction_to.y > 0.0 ? ceilf(from.y) : floorf(from.y);
+    from_rounded.z = direction_to.z > 0.0 ? ceilf(from.z) : floorf(from.z);
+
+    if (_is_position_valid(from_rounded, true)) {
+        from_id = _hash_position(from_rounded);
+
+        if (!_points.lookup(from_id, result)) {
+            ERR_FAIL_COND_V_MSG(result == nullptr, result, vformat("Off-grid position too far from grid to find closest position. off-grid position = %v, rounded position = %v", from, from_rounded));
+        }
+    }
 
     return result;
 }
@@ -908,7 +924,7 @@ bool ThetaStar3D::_is_position_valid(const Vector3i position, bool warn) const {
     bool result = false;
     Vector3i min = Vector3i(0, 0, 0);
     Vector3i max = dimensions - Vector3i(1, 1, 1);
-    Vector3i clamped_position = position.clamp(min, max);\
+    Vector3i clamped_position = position.clamp(min, max);
     
     result = position == clamped_position;
 
