@@ -29,7 +29,6 @@ struct Point {
 
     int64_t id = 0;
     VectorType position;
-    real_t weight_scale = 0;
     bool enabled = true;
 
     OAHashMap<int64_t, Point<VectorType>*> neighbors = 4u;

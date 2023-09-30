@@ -37,7 +37,7 @@ namespace TestThetaStar {
                         for (int32_t point_y = 0; point_y < size.y; point_y++) {
                             for (int32_t point_z = 0; point_z < size.z; point_z++) {
                                 Vector3i point_position = Vector3i(point_x, point_y, point_z);
-                                CHECK(t->is_point_valid_for_hashing(point_position));
+                                CHECK(t->is_position_valid_for_hashing(point_position));
 
                                 int64_t id = t->get_point_hash(point_position);
                                 record_of_hashes.set(id, record_of_hashes.get(id) + 1u);

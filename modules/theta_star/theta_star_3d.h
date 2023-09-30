@@ -30,6 +30,7 @@ public:
     virtual ~ThetaStar3D();
     
     void reserve(const uint32_t new_capacity);
+    void clear();
 
     Vector3i get_dimensions() const;
     int64_t get_size() const;
@@ -41,7 +42,8 @@ public:
     int64_t get_point_hash(const Vector3i position);
     bool is_position_valid_for_hashing(const Vector3i position) const;
     bool is_point_disabled(const int64_t id) const;
-    // todo:: if keeping weight scale, get_point_weight_scale()
+    bool has_id(const int64_t id);
+    bool has_point(const Vector3i position);
 
     TypedArray<Vector3i> get_points() const;
     TypedArray<Vector3i> get_point_connections(const Vector3i position);
@@ -55,14 +57,14 @@ public:
 
     void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
-    bool add_point(const Vector3i position, const real_t weight_scale = 1.0); // todo:: does weight_scale even work with theta*?
+    bool add_point(const Vector3i position);
     bool remove_point(const Vector3i position); //todo:: unit test for sure
 
     bool disable_point_by_position(const Vector3i position, const bool disable = true);
     bool disable_point_by_id(const int64_t id, const bool disable = true);
 
     bool connect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false);
-    bool disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false); //todo:: implement and unit test
+    bool disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional = false); //todo:: unit test
 
 
 protected:
@@ -88,8 +90,6 @@ protected:
     GDVIRTUAL2RC(real_t, _compute_edge_cost, int64_t, int64_t)
 	GDVIRTUAL2RC(real_t, _estimate_edge_cost, int64_t, int64_t)
 
-    virtual void _clear();
-    
     bool _is_position_valid(const Vector3i position, bool warn = false) const;
 
     void _build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const;

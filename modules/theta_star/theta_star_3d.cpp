@@ -31,13 +31,20 @@ ThetaStar3D::ThetaStar3D(const Vector3i in_dimensions, const bool reserve) {
 
 
 ThetaStar3D::~ThetaStar3D() {
-    _clear();
+    clear();
 }
 
 
 void ThetaStar3D::reserve(const uint32_t new_capacity) {
 
     _points.reserve(new_capacity);
+}
+
+
+void ThetaStar3D::clear() {
+    for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
+		memdelete(*(it.value));
+	}
 }
 
 
@@ -126,6 +133,25 @@ bool ThetaStar3D::is_point_disabled(const int64_t id) const {
     if (result) {
         result = !point->enabled;
     }
+
+    return result;
+}
+
+
+bool ThetaStar3D::has_id(const int64_t id) {
+    bool result = false;
+
+    result = _points.has(id);
+
+    return result;
+}
+
+
+bool ThetaStar3D::has_point(const Vector3i position) {
+    bool result = false;
+    int64_t id = _hash_position(position);
+
+    result = _points.has(id);
 
     return result;
 }
@@ -312,22 +338,18 @@ void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
 }
 
 
-bool ThetaStar3D::add_point(const Vector3i position, const real_t weight_scale) {
+bool ThetaStar3D::add_point(const Vector3i position) {
     bool result = false;
     
     result = _is_position_valid(position, true);
 
     if (result) {
-        result = weight_scale >= 0.0;
-        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's weight_scale must be non-negative. weight_scale = %f", weight_scale));
-
         int64_t id = _hash_position(position);
 
         Point<Vector3i>* point = memnew(Point<Vector3i>);
 
         point->id = id;
         point->position = position;
-        point->weight_scale = weight_scale;
 
         _points.set(id, point);
     }
@@ -406,10 +428,24 @@ bool ThetaStar3D::connect_points(const Vector3i from, const Vector3i to, const b
 bool ThetaStar3D::disconnect_points(const Vector3i from, const Vector3i to, const bool bidirectional) {
     bool result = false;
 
-    // int64_t from_id = _hash_position(from);
-    // int64_t to_id = _hash_position(to);
+    int64_t from_id = _hash_position(from);
+    int64_t to_id = _hash_position(to);
 
-    // result = _connect_points(from_id, to_id, bidirectional);
+    Point<Vector3i>* from_point = nullptr;
+    Point<Vector3i>* to_point = nullptr;
+    result = _points.lookup(from_id, from_point) && _points.lookup(to_id, to_point);
+
+    if (result) {
+        if (from_point->neighbors.has(to_id)) {
+            from_point->neighbors.remove(to_id);
+        }
+    }
+
+    if (bidirectional) {
+        if (to_point->neighbors.has(from_id)) {
+            to_point->neighbors.remove(from_id);
+        }
+    }
     
     return result;
 }
@@ -417,6 +453,8 @@ bool ThetaStar3D::disconnect_points(const Vector3i from, const Vector3i to, cons
 
 void ThetaStar3D::_bind_methods() {
     ClassDB::bind_static_method("ThetaStar3D", D_METHOD("create", "in_dimensions", "reserve"), &ThetaStar3D::create, DEFVAL(false));
+    ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
+    ClassDB::bind_method(D_METHOD("clear"), &ThetaStar3D::clear);
     ClassDB::bind_method(D_METHOD("get_dimensions"), &ThetaStar3D::get_dimensions);
     ClassDB::bind_method(D_METHOD("get_size"), &ThetaStar3D::get_size);
     ClassDB::bind_method(D_METHOD("get_point_count"), &ThetaStar3D::get_point_count);
@@ -426,6 +464,9 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_position", "id"), &ThetaStar3D::get_point_position);
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
     ClassDB::bind_method(D_METHOD("is_position_valid_for_hashing", "position"), &ThetaStar3D::is_position_valid_for_hashing);
+    ClassDB::bind_method(D_METHOD("is_point_disabled", "id"), &ThetaStar3D::is_point_disabled);
+    ClassDB::bind_method(D_METHOD("has_id", "id"), &ThetaStar3D::has_id);
+    ClassDB::bind_method(D_METHOD("has_point", "position"), &ThetaStar3D::has_point);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
     ClassDB::bind_method(D_METHOD("get_point_connections", "position"), &ThetaStar3D::get_point_connections);
     ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
@@ -435,8 +476,10 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_path_from_ids", "from", "to"), &ThetaStar3D::get_point_path_from_ids);
     ClassDB::bind_method(D_METHOD("get_point_path_from_off_grid_positions", "from", "to"), &ThetaStar3D::get_point_path_from_off_grid_positions);
     ClassDB::bind_method(D_METHOD("build_bidirectional_grid", "in_neighbors"), &ThetaStar3D::build_bidirectional_grid, DEFVAL(TypedArray<Vector3i>()));
-    ClassDB::bind_method(D_METHOD("add_point", "position", "weight_scale"), &ThetaStar3D::add_point, DEFVAL(1.0));
+    ClassDB::bind_method(D_METHOD("add_point", "position"), &ThetaStar3D::add_point, DEFVAL(1.0));
     ClassDB::bind_method(D_METHOD("remove_point", "position"), &ThetaStar3D::remove_point);
+    ClassDB::bind_method(D_METHOD("disable_point_by_position", "position", "disabled"), &ThetaStar3D::disable_point_by_position);
+    ClassDB::bind_method(D_METHOD("disable_point_by_id", "id", "disabled"), &ThetaStar3D::disable_point_by_id);
     ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("disconnect_points", "from", "to", "bidirectional"), &ThetaStar3D::disconnect_points, DEFVAL(false));
 
@@ -885,7 +928,7 @@ real_t ThetaStar3D::_compute_edge_cost(int64_t from, int64_t to) {
     unweighted_result += abs(from_point->position.y - to_point->position.y);
     unweighted_result += abs(from_point->position.z - to_point->position.z);
 
-    result = static_cast<real_t>(unweighted_result) * to_point->weight_scale;
+    result = static_cast<real_t>(unweighted_result);
 
     return result;
 }
@@ -907,16 +950,9 @@ real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) {
     Vector3 from_position = Vector3(from_point->position);
     Vector3 to_position = Vector3(to_point->position);
 
-    result = from_position.distance_to(to_position) * to_point->weight_scale;
+    result = from_position.distance_to(to_position);
 
     return result;
-}
-
-
-void ThetaStar3D::_clear() {
-    for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
-		memdelete(*(it.value));
-	}
 }
 
 
