@@ -10,11 +10,12 @@
 
 #include "core/templates/oa_hash_map.h"
 
-// final todos:: refactor to allow gdscript inheritance and allow negative vectors, possibly allow cell height width depth scaling?
+// final todos:: allow cell height width depth scaling?
 namespace ThetaStar {
 
 class ThetaStar3D: public RefCounted {
     GDCLASS(ThetaStar3D, RefCounted);
+
 
 protected:
     Vector3i dimensions = Vector3i(1, 1, 1);
@@ -23,10 +24,7 @@ protected:
 
 
 public:
-    static Ref<ThetaStar3D> create(const Vector3i in_dimensions, const bool reserve = false);
-
     ThetaStar3D();
-    ThetaStar3D(const Vector3i in_dimensions, const bool reserve = false);
     virtual ~ThetaStar3D();
     
     void reserve(const uint32_t new_capacity);
@@ -41,7 +39,8 @@ public:
     Vector3i get_point_position(const int64_t id) const;
     int64_t get_point_hash(const Vector3i position);
     bool is_position_valid_for_hashing(const Vector3i position) const;
-    bool is_point_disabled(const int64_t id) const;
+    bool is_id_disabled(const int64_t id) const;
+    bool is_position_disabled(const Vector3i position);
     bool has_id(const int64_t id);
     bool has_point(const Vector3i position);
 
@@ -54,8 +53,6 @@ public:
     PackedInt64Array get_id_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3i> get_point_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3> get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to);
-
-    void build_bidirectional_grid(TypedArray<Vector3i> in_neighbors = TypedArray<Vector3i>());
 
     bool add_point(const Vector3i position);
     bool remove_point(const Vector3i position); //todo:: unit test for sure
@@ -72,7 +69,6 @@ protected:
     static bool _are_dimensions_valid(const Vector3i& in_dimensions);
 
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
-    void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
     Point<Vector3i>* _get_closest_point_toward(const Vector3 from, const Vector3 to);
 
     void _get_point_path(Point<Vector3i>* const from, Point<Vector3i>* const to, LocalVector<const Point<Vector3i>*>& outPath);
@@ -80,7 +76,7 @@ protected:
     void _expand_point_helper(Point<Vector3i>* const previous_point, Point<Vector3i>* const neighbor, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);
     bool _has_line_of_sight_helper(LineOfSightArguments& args); //todo:: unit test for sure
     
-    virtual bool _has_line_of_sight(Vector3i from, Vector3i to); //todo:: unit test for sure
+    virtual bool _has_line_of_sight(Vector3i from, Vector3i to);
     virtual int64_t _hash_position(Vector3i position);
     virtual real_t _compute_edge_cost(int64_t from, int64_t to);
     virtual real_t _estimate_edge_cost(int64_t from, int64_t to);
@@ -91,8 +87,6 @@ protected:
 	GDVIRTUAL2RC(real_t, _estimate_edge_cost, int64_t, int64_t)
 
     bool _is_position_valid(const Vector3i position, bool warn = false) const;
-
-    void _build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const;
 };
 
 };

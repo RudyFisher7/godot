@@ -4,29 +4,8 @@
 namespace ThetaStar {
 
 
-Ref<ThetaStar3D> ThetaStar3D::create(const Vector3i in_dimensions, const bool reserve) {
-    Ref<ThetaStar3D> result = memnew(ThetaStar3D(in_dimensions, reserve));
-    return result;
-}
-
-
-ThetaStar3D::ThetaStar3D() { // todo:: inheritance stuff
-    ERR_FAIL_MSG("ThetaStar3D can't be created directly. Use create() method.");
-}
-
-
-ThetaStar3D::ThetaStar3D(const Vector3i in_dimensions, const bool reserve) {
-    ERR_FAIL_COND_MSG(!ThetaStar3D::_are_dimensions_valid(in_dimensions), vformat("ThetaStar3D's dimensions must be set to a Vector with all positive values. dimensions = %v", in_dimensions));
-    
-    dimensions = in_dimensions;
-
-    if (reserve) {
-        uint32_t capacity = dimensions.x * dimensions.y * dimensions.z;
-
-        if (capacity > _points.get_capacity()) {
-            _points.reserve(capacity);
-        }
-    }
+ThetaStar3D::ThetaStar3D() { // todo:: enforce abstractness
+    //ERR_FAIL_MSG("ThetaStar3D can't be created directly. It is an abstract class.");
 }
 
 
@@ -36,7 +15,6 @@ ThetaStar3D::~ThetaStar3D() {
 
 
 void ThetaStar3D::reserve(const uint32_t new_capacity) {
-
     _points.reserve(new_capacity);
 }
 
@@ -123,8 +101,8 @@ bool ThetaStar3D::is_position_valid_for_hashing(const Vector3i position) const {
 }
 
 
-bool ThetaStar3D::is_point_disabled(const int64_t id) const {
-    bool result = false;
+bool ThetaStar3D::is_id_disabled(const int64_t id) const {
+    bool result = true;
 
     Point<Vector3i>* point = nullptr;
 
@@ -133,6 +111,17 @@ bool ThetaStar3D::is_point_disabled(const int64_t id) const {
     if (result) {
         result = !point->enabled;
     }
+
+    return result;
+}
+
+
+bool ThetaStar3D::is_position_disabled(const Vector3i position) {
+    bool result = true;
+
+    int64_t id = _hash_position(position);
+
+    result = is_id_disabled(id);
 
     return result;
 }
@@ -317,27 +306,6 @@ TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_grid_positions(const Ve
 }
 
 
-void ThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
-    for (int32_t x = 0; x < dimensions.x; x++) {
-        for (int32_t y = 0; y < dimensions.y; y++) {
-            for (int32_t z = 0; z < dimensions.z; z++) {
-                add_point(Vector3i(x, y, z));
-            }
-        }
-    }
-
-    if (in_neighbors.is_empty()) {
-        _build_default_neighbors(in_neighbors);
-    }
-    
-    for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
-        Point<Vector3i>* point = *it.value;
-        
-        _connect_bidirectional_neighbors_in_grid(point, in_neighbors);
-	}
-}
-
-
 bool ThetaStar3D::add_point(const Vector3i position) {
     bool result = false;
     
@@ -398,7 +366,7 @@ bool ThetaStar3D::disable_point_by_id(const int64_t id, const bool disable) {
     Point<Vector3i>* point = nullptr;
 
     if (_points.lookup(id, point)) {
-        point->enabled = disable;
+        point->enabled = !disable;
         result = true;
     }
 
@@ -452,7 +420,6 @@ bool ThetaStar3D::disconnect_points(const Vector3i from, const Vector3i to, cons
 
 
 void ThetaStar3D::_bind_methods() {
-    ClassDB::bind_static_method("ThetaStar3D", D_METHOD("create", "in_dimensions", "reserve"), &ThetaStar3D::create, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
     ClassDB::bind_method(D_METHOD("clear"), &ThetaStar3D::clear);
     ClassDB::bind_method(D_METHOD("get_dimensions"), &ThetaStar3D::get_dimensions);
@@ -464,21 +431,19 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_position", "id"), &ThetaStar3D::get_point_position);
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
     ClassDB::bind_method(D_METHOD("is_position_valid_for_hashing", "position"), &ThetaStar3D::is_position_valid_for_hashing);
-    ClassDB::bind_method(D_METHOD("is_point_disabled", "id"), &ThetaStar3D::is_point_disabled);
+    ClassDB::bind_method(D_METHOD("is_id_disabled", "id"), &ThetaStar3D::is_id_disabled);
     ClassDB::bind_method(D_METHOD("has_id", "id"), &ThetaStar3D::has_id);
     ClassDB::bind_method(D_METHOD("has_point", "position"), &ThetaStar3D::has_point);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
     ClassDB::bind_method(D_METHOD("get_point_connections", "position"), &ThetaStar3D::get_point_connections);
-    ClassDB::bind_method(D_METHOD("reserve", "new_capacity"), &ThetaStar3D::reserve);
     ClassDB::bind_method(D_METHOD("get_id_path_from_positions", "from", "to"), &ThetaStar3D::get_id_path_from_positions);
     ClassDB::bind_method(D_METHOD("get_point_path_from_positions", "from", "to"), &ThetaStar3D::get_point_path_from_positions);
     ClassDB::bind_method(D_METHOD("get_id_path_from_ids", "from", "to"), &ThetaStar3D::get_id_path_from_ids);
     ClassDB::bind_method(D_METHOD("get_point_path_from_ids", "from", "to"), &ThetaStar3D::get_point_path_from_ids);
     ClassDB::bind_method(D_METHOD("get_point_path_from_off_grid_positions", "from", "to"), &ThetaStar3D::get_point_path_from_off_grid_positions);
-    ClassDB::bind_method(D_METHOD("build_bidirectional_grid", "in_neighbors"), &ThetaStar3D::build_bidirectional_grid, DEFVAL(TypedArray<Vector3i>()));
     ClassDB::bind_method(D_METHOD("add_point", "position"), &ThetaStar3D::add_point, DEFVAL(1.0));
     ClassDB::bind_method(D_METHOD("remove_point", "position"), &ThetaStar3D::remove_point);
-    ClassDB::bind_method(D_METHOD("disable_point_by_position", "position", "disabled"), &ThetaStar3D::disable_point_by_position);
+    ClassDB::bind_method(D_METHOD("disable_point_by_position", "position", "disabled"), &ThetaStar3D::disable_point_by_position, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("disable_point_by_id", "id", "disabled"), &ThetaStar3D::disable_point_by_id);
     ClassDB::bind_method(D_METHOD("connect_points", "from", "to", "bidirectional"), &ThetaStar3D::connect_points, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("disconnect_points", "from", "to", "bidirectional"), &ThetaStar3D::disconnect_points, DEFVAL(false));
@@ -528,31 +493,6 @@ bool ThetaStar3D::_connect_points(const int64_t from_id, const int64_t to_id, co
     }
     
     return result;
-}
-
-
-void ThetaStar3D::_connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors) {
-    for (size_t i = 0; i < in_neighbors.size(); i++) {
-        const Vector3i neighbor_position = from_point->position + in_neighbors[i];
-
-        bool is_neighbor_position_valid = _is_position_valid(neighbor_position);
-
-        if (is_neighbor_position_valid) {
-            const int64_t neighbor_id = _hash_position(neighbor_position);
-            Point<Vector3i>* neighbor_point = nullptr;
-
-            if (_points.lookup(neighbor_id, neighbor_point)) {
-                Vector3 p = Vector3(from_point->position.x, from_point->position.y, from_point->position.z);
-                Vector3 n = Vector3(neighbor_point->position.x, neighbor_point->position.y, neighbor_point->position.z);
-                if (p.distance_to(n) > 1.1) {
-                    print_line(vformat("from = %v, to = %v, neighbor = %v", from_point->position, neighbor_point->position, in_neighbors[i]));
-                }
-
-                from_point->neighbors.set(neighbor_id, neighbor_point);
-                neighbor_point->neighbors.set(from_point->id, from_point);
-            }
-        }
-    }
 }
 
 
@@ -706,6 +646,10 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
 
 bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     bool result = false;
+
+    if (GDVIRTUAL_CALL(_has_line_of_sight, from, to, result)) {
+        return result;
+    }
 
     int32_t from_x = from.x;
     int32_t from_y = from.y;
@@ -897,13 +841,11 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
 
 
 int64_t ThetaStar3D::_hash_position(Vector3i position) {
-    int64_t result = 0;
+    int64_t result = -1;
 
     if (GDVIRTUAL_CALL(_hash_position, position, result)) {
         return result;
     }
-
-    result = position.x + (dimensions.x * position.y) + (dimensions.x * dimensions.y * position.z);
 
     return result;
 }
@@ -965,20 +907,10 @@ bool ThetaStar3D::_is_position_valid(const Vector3i position, bool warn) const {
     result = position == clamped_position;
 
     if (warn) {
-        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's position must be non-negative and within dimensions. position = %v", position));
+        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's position must be within dimensions. position = %v", position));
     }
 
     return result;
-}
-
-
-void ThetaStar3D::_build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const {
-    out_neighbors.push_back(Vector3i(0, 0, 1));
-    out_neighbors.push_back(Vector3i(0, 0, -1));
-    out_neighbors.push_back(Vector3i(1, 0, 0));
-    out_neighbors.push_back(Vector3i(-1, 0, 0));
-    out_neighbors.push_back(Vector3i(0, 1, 0));
-    out_neighbors.push_back(Vector3i(0, -1, 0));
 }
 
 };

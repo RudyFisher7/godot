@@ -4,7 +4,7 @@
 
 #include "tests/test_macros.h"
 
-#include "modules/theta_star/theta_star_3d.h"
+#include "modules/theta_star/utheta_star_3d.h"
 
 
 namespace TestThetaStar {
@@ -24,7 +24,7 @@ namespace TestThetaStar {
                 for (int32_t z = 1; z < count; z++) {
                     size_for_hash_tests.z = z;
 
-                    Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(size_for_hash_tests);
+                    Ref<ThetaStar::UThetaStar3D> t = ThetaStar::UThetaStar3D::create(size_for_hash_tests);
 
                     Vector3i size = t->get_dimensions();
                     int record_count = static_cast<int>(size.x * size.y * size.z);
@@ -51,7 +51,7 @@ namespace TestThetaStar {
                         CHECK(record_of_hashes.get(i) == 1u);
                     }
 
-                    memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
+                    memdelete<Ref<ThetaStar::UThetaStar3D>>(&t);
                 }
             }
         }
@@ -60,40 +60,40 @@ namespace TestThetaStar {
     TEST_CASE("static create") {
 
         SUBCASE("Invalid") {
-            Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(Vector3i(0, 0, 0));
+            Ref<ThetaStar::UThetaStar3D> t = ThetaStar::UThetaStar3D::create(Vector3i(0, 0, 0));
 
             CHECK(t != nullptr);
             CHECK(t->get_dimensions() == Vector3i(1, 1, 1));
 
-            memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
+            memdelete<Ref<ThetaStar::UThetaStar3D>>(&t);
         }
 
         SUBCASE("valid") {
-            Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(Vector3i(1, 1, 1));
+            Ref<ThetaStar::UThetaStar3D> t = ThetaStar::UThetaStar3D::create(Vector3i(1, 1, 1));
 
             CHECK(t != nullptr);
 
-            memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
+            memdelete<Ref<ThetaStar::UThetaStar3D>>(&t);
         }
 
         SUBCASE("valid with size = (1000, 1000, 1000)") {
             int32_t val = 1000;
-            Ref<ThetaStar::ThetaStar3D> t = ThetaStar::ThetaStar3D::create(Vector3i(val, val, val));
+            Ref<ThetaStar::UThetaStar3D> t = ThetaStar::UThetaStar3D::create(Vector3i(val, val, val));
 
             CHECK(t != nullptr);
             CHECK(t->get_capacity() == static_cast<int64_t>(val * val * val));
 
-            memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
+            memdelete<Ref<ThetaStar::UThetaStar3D>>(&t);
         }
     }
 
     TEST_CASE("constructor") {
-        Ref<ThetaStar::ThetaStar3D> t = memnew(ThetaStar::ThetaStar3D);
+        Ref<ThetaStar::UThetaStar3D> t = memnew(ThetaStar::UThetaStar3D);
 
         CHECK(t != nullptr);
         CHECK(t->get_dimensions() == Vector3i(1, 1, 1));
 
-        memdelete<Ref<ThetaStar::ThetaStar3D>>(&t);
+        memdelete<Ref<ThetaStar::UThetaStar3D>>(&t);
     }
 
     TEST_SUITE_END(); // ThetaStar
