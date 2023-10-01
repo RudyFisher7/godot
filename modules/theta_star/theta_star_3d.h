@@ -10,7 +10,7 @@
 
 #include "core/templates/oa_hash_map.h"
 
-// final todos:: allow cell height width depth scaling?
+// final todos:: document how it is easy to do cell size in gdscript - just multiply each Vector3i by the cell size.
 namespace ThetaStar {
 
 class ThetaStar3D: public RefCounted {
@@ -20,6 +20,7 @@ class ThetaStar3D: public RefCounted {
 protected:
     Vector3i dimensions = Vector3i(1, 1, 1);
     OAHashMap<int64_t, Point<Vector3i>*> _points;
+    int64_t number_of_disabled_points = 0;
     uint8_t closed_counter = 0u;
 
 
@@ -33,6 +34,7 @@ public:
     Vector3i get_dimensions() const;
     int64_t get_size() const;
     int64_t get_point_count() const;
+    int64_t get_disabled_point_count() const;
     bool is_empty() const;
     int64_t get_capacity() const;
     int64_t get_point_id(const Vector3i position);

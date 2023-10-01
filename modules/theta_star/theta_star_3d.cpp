@@ -44,6 +44,10 @@ int64_t ThetaStar3D::get_point_count() const {
     return static_cast<int64_t>(_points.get_num_elements());
 }
 
+int64_t ThetaStar3D::get_disabled_point_count() const {
+    return number_of_disabled_points;
+}
+
 
 bool ThetaStar3D::is_empty() const {
     return _points.is_empty();
@@ -366,7 +370,15 @@ bool ThetaStar3D::disable_point_by_id(const int64_t id, const bool disable) {
     Point<Vector3i>* point = nullptr;
 
     if (_points.lookup(id, point)) {
+
+        if (disable && point->enabled) {
+            number_of_disabled_points++;
+        } else if (!disable && !point->enabled) {
+            number_of_disabled_points--;
+        }
+
         point->enabled = !disable;
+
         result = true;
     }
 
@@ -425,6 +437,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_dimensions"), &ThetaStar3D::get_dimensions);
     ClassDB::bind_method(D_METHOD("get_size"), &ThetaStar3D::get_size);
     ClassDB::bind_method(D_METHOD("get_point_count"), &ThetaStar3D::get_point_count);
+    ClassDB::bind_method(D_METHOD("get_disabled_point_count"), &ThetaStar3D::get_disabled_point_count);
     ClassDB::bind_method(D_METHOD("is_empty"), &ThetaStar3D::is_empty);
     ClassDB::bind_method(D_METHOD("get_capacity"), &ThetaStar3D::get_capacity);
     ClassDB::bind_method(D_METHOD("get_point_id", "position"), &ThetaStar3D::get_point_id);
@@ -604,7 +617,7 @@ void ThetaStar3D::_expand_point_helper(Point<Vector3i>* const previous_point, Po
 }
 
 
-bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
+bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) { // todo:: I don't think this function is quite right
     bool result = true;
 
     int64_t id_to_check_1 = _hash_position(args.voxel_to_check_1);
@@ -619,7 +632,7 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
     args.balance += args.get_small_axis_distance();
     
     if (args.balance >= args.get_big_axis_distance()) {
-        result = _points.lookup(id_to_check_1, point_to_check_1) && point_to_check_1->enabled; 
+        result = !_points.lookup(id_to_check_1, point_to_check_1) || point_to_check_1->enabled; 
         if (result) {
             args.small_axis_from += args.get_small_axis_sign();
             args.balance -= args.get_big_axis_distance();
@@ -628,15 +641,15 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
 
     if (result) {
         if (args.balance != 0) {
-            result = _points.lookup(id_to_check_1, point_to_check_1) && point_to_check_1->enabled;
+            result = !_points.lookup(id_to_check_1, point_to_check_1) || point_to_check_1->enabled;
         }
     }
 
     if (result) {
         if (args.get_small_axis_distance() == 0) {
             result = (
-                    (_points.lookup(id_to_check_2, point_to_check_2) && point_to_check_2->enabled)
-                    && (_points.lookup(id_to_check_3, point_to_check_3) && point_to_check_3->enabled)
+                    (!_points.lookup(id_to_check_2, point_to_check_2) || point_to_check_2->enabled)
+                    && (!_points.lookup(id_to_check_3, point_to_check_3) || point_to_check_3->enabled)
             );
         }
     }
@@ -645,7 +658,7 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) {
 }
 
 
-bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
+bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) { //todo:: this works with a grid where each cell is 1,1,1 difference, but doesn't accomodate any other types of graphs 
     bool result = false;
 
     if (GDVIRTUAL_CALL(_has_line_of_sight, from, to, result)) {
