@@ -102,7 +102,7 @@ bool ThetaStar3D::is_position_valid_for_hashing(const Vector3i position) const {
 
 
 bool ThetaStar3D::is_id_disabled(const int64_t id) const {
-    bool result = true;
+    bool result = false;
 
     Point<Vector3i>* point = nullptr;
 
@@ -117,7 +117,7 @@ bool ThetaStar3D::is_id_disabled(const int64_t id) const {
 
 
 bool ThetaStar3D::is_position_disabled(const Vector3i position) {
-    bool result = true;
+    bool result = false;
 
     int64_t id = _hash_position(position);
 
@@ -432,6 +432,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_hash", "position"), &ThetaStar3D::get_point_hash);
     ClassDB::bind_method(D_METHOD("is_position_valid_for_hashing", "position"), &ThetaStar3D::is_position_valid_for_hashing);
     ClassDB::bind_method(D_METHOD("is_id_disabled", "id"), &ThetaStar3D::is_id_disabled);
+    ClassDB::bind_method(D_METHOD("is_position_disabled", "id"), &ThetaStar3D::is_position_disabled);
     ClassDB::bind_method(D_METHOD("has_id", "id"), &ThetaStar3D::has_id);
     ClassDB::bind_method(D_METHOD("has_point", "position"), &ThetaStar3D::has_point);
     ClassDB::bind_method(D_METHOD("get_points"), &ThetaStar3D::get_points);
