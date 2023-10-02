@@ -10,7 +10,11 @@
 
 #include "core/templates/oa_hash_map.h"
 
-// final todos:: document how it is easy to do cell size in gdscript - just multiply each Vector3i by the cell size.
+// final todos:: 
+// - document how it is easy to do cell size in gdscript - just multiply each Vector3i by the cell size.
+// - document how to use for good line of sight checks:
+//      - use an external cell size and offset and have this graph stay at a cell size of 1,1,1
+//      - simulating a cell size directly will mean that larger cells' borders are just ignored if should be disabled, it will be consider a sparse graph instead with free space
 namespace ThetaStar {
 
 class ThetaStar3D: public RefCounted {

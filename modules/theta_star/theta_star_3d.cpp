@@ -516,6 +516,7 @@ Point<Vector3i>* ThetaStar3D::_get_closest_point_toward(const Vector3 from, cons
     int64_t from_id = -1;
     Vector3 direction_to = from.direction_to(to);
 
+    // todo:: handle the case where point is out of bounds, so get the border point with 3d intersection check.
     from_rounded.x = direction_to.x > 0.0 ? ceilf(from.x) : floorf(from.x);
     from_rounded.y = direction_to.y > 0.0 ? ceilf(from.y) : floorf(from.y);
     from_rounded.z = direction_to.z > 0.0 ? ceilf(from.z) : floorf(from.z);
@@ -559,15 +560,16 @@ void ThetaStar3D::_get_point_path(Point<Vector3i>* const from, Point<Vector3i>* 
         }
     }
 
-    const Point<Vector3i>* point = to;
-    while (point != from) {
+    if (is_path_found) {
+        const Point<Vector3i>* point = to;
+        while (point != from) {
+            outPath.push_back(point);
+            point = point->previous_point;
+        }
+
         outPath.push_back(point);
-        point = point->previous_point;
+        outPath.invert();
     }
-
-    outPath.push_back(point);
-
-    outPath.invert();
 }
 
 
@@ -658,7 +660,7 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) { // tod
 }
 
 
-bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) { //todo:: this works with a grid where each cell is 1,1,1 difference, but doesn't accomodate any other types of graphs 
+bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     bool result = false;
 
     if (GDVIRTUAL_CALL(_has_line_of_sight, from, to, result)) {
