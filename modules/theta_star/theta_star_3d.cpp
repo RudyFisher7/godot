@@ -23,6 +23,8 @@ void ThetaStar3D::clear() {
     for (OAHashMap<int64_t, Point<Vector3i>*>::Iterator it = _points.iter(); it.valid; it = _points.next_iter(it)) {
 		memdelete(*(it.value));
 	}
+
+    _points.clear();
 }
 
 
@@ -684,6 +686,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     int32_t sign_z = 1;
 
     bool no_collision = true;
+    // bool small_axes_arrived = false;
 
     if (distance_x < 0) {
         distance_x = -distance_x;
@@ -700,6 +703,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
         sign_z = -1;
     }
 
+    // we are moving farthest along x axis
     if (distance_x >= distance_y && distance_x >= distance_z) {
         LineOfSightArguments y_args(
                 from.y,
@@ -748,8 +752,11 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             }
 
             from_x += sign_x;
+            // from_z += sign_z;
+            // small_axes_arrived = from_x == to_x && from_z == to_z;
         }
 
+    // we are moving farthest along y axis
     } else if (distance_y >= distance_x && distance_y >= distance_z) {
         LineOfSightArguments x_args(
                 from.x,
@@ -798,8 +805,11 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             }
 
             from_y += sign_y;
+            // from_z += sign_z;
+            // small_axes_arrived = from_y == to_y && from_z == to_z;
         }
 
+    // we are moving farthest along z axis
     } else if (distance_z >= distance_x && distance_z >= distance_y) {
         LineOfSightArguments x_args(
                 from.x,
@@ -815,7 +825,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
                 sign_y
         );
 
-        while (no_collision && from_z != to_z) {
+        while (no_collision && from_x != to_x) {
             Vector3i tmp;
 
             tmp.x = x_args.small_axis_from + ((x_args.get_small_axis_sign() - 1) / 2); // checked twice? redundant?
@@ -846,7 +856,9 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
                 no_collision = _has_line_of_sight_helper(y_args);
             }
 
-            from_z += sign_z;
+            from_x += sign_x;
+            // from_y += sign_y;
+            // small_axes_arrived = from_x == to_x && from_y == to_y;
         }
     }
 
