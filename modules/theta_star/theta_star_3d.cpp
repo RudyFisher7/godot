@@ -904,7 +904,7 @@ real_t ThetaStar3D::_compute_edge_cost(int64_t from, int64_t to) {
 }
 
 
-real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) {
+real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) { // todo:: this is too accurate I think
     real_t result = 0.0;
 
     if (GDVIRTUAL_CALL(_estimate_edge_cost, from, to, result)) {
@@ -920,7 +920,7 @@ real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) {
     Vector3 from_position = Vector3(from_point->position);
     Vector3 to_position = Vector3(to_point->position);
 
-    result = from_position.distance_to(to_position);
+    result = floorf(from_position.distance_to(to_position));
 
     return result;
 }
