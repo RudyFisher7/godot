@@ -636,7 +636,13 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) { // tod
     args.balance += args.get_small_axis_distance();
     
     if (args.balance >= args.get_big_axis_distance()) {
-        result = !_points.lookup(id_to_check_1, point_to_check_1) || point_to_check_1->enabled; 
+        bool point_to_check_1_exists = _points.lookup(id_to_check_1, point_to_check_1);
+
+        // only check if point if it is enabled if it exists, otherwise just assume the space if see-through
+        if (point_to_check_1_exists) {
+            result = point_to_check_1->enabled;
+        }
+
         if (result) {
             args.small_axis_from += args.get_small_axis_sign();
             args.balance -= args.get_big_axis_distance();
@@ -645,16 +651,28 @@ bool ThetaStar3D::_has_line_of_sight_helper(LineOfSightArguments& args) { // tod
 
     if (result) {
         if (args.balance != 0) {
-            result = !_points.lookup(id_to_check_1, point_to_check_1) || point_to_check_1->enabled;
+            bool point_to_check_1_exists = _points.lookup(id_to_check_1, point_to_check_1);
+
+            // only check if point if it is enabled if it exists, otherwise just assume the space if see-through
+            if (point_to_check_1_exists) {
+                result = point_to_check_1->enabled;
+            }
         }
     }
 
     if (result) {
         if (args.get_small_axis_distance() == 0) {
-            result = (
-                    (!_points.lookup(id_to_check_2, point_to_check_2) || point_to_check_2->enabled)
-                    && (!_points.lookup(id_to_check_3, point_to_check_3) || point_to_check_3->enabled)
-            );
+            bool point_to_check_2_exists = _points.lookup(id_to_check_2, point_to_check_2);
+            bool point_to_check_3_exists = _points.lookup(id_to_check_3, point_to_check_3);
+
+            // only check if point if it is enabled if it exists, otherwise just assume the space if see-through
+            if (point_to_check_2_exists) {
+                result = point_to_check_2->enabled;
+            }
+
+            if (result && point_to_check_3_exists) {
+                result = point_to_check_3->enabled;
+            }
         }
     }
 
@@ -780,7 +798,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             x_args.voxel_to_check_1 = tmp;
 
-            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign();
+            tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign(); // this should not be checked if distance_x == 0
             x_args.voxel_to_check_2 = tmp;
 
             tmp.x = x_args.small_axis_from + x_args.get_small_axis_sign() - 1;
@@ -792,7 +810,7 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
             tmp.z = z_args.small_axis_from + ((z_args.get_small_axis_sign() - 1) / 2);
             z_args.voxel_to_check_1 = tmp;
 
-            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign();
+            tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign(); // this should not be checked if distance_z == 0
             z_args.voxel_to_check_2 = tmp;
 
             tmp.z = z_args.small_axis_from + z_args.get_small_axis_sign() - 1;
