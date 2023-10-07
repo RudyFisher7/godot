@@ -456,7 +456,7 @@ void ThetaStar3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_path_from_positions", "from", "to"), &ThetaStar3D::get_point_path_from_positions);
     ClassDB::bind_method(D_METHOD("get_id_path_from_ids", "from", "to"), &ThetaStar3D::get_id_path_from_ids);
     ClassDB::bind_method(D_METHOD("get_point_path_from_ids", "from", "to"), &ThetaStar3D::get_point_path_from_ids);
-    ClassDB::bind_method(D_METHOD("get_point_path_from_off_grid_positions", "from", "to"), &ThetaStar3D::get_point_path_from_off_grid_positions);
+    ClassDB::bind_method(D_METHOD("get_point_path_from_off_graph_positions", "from", "to"), &ThetaStar3D::get_point_path_from_off_graph_positions);
     ClassDB::bind_method(D_METHOD("add_point", "position"), &ThetaStar3D::add_point, DEFVAL(1.0));
     ClassDB::bind_method(D_METHOD("remove_point", "position"), &ThetaStar3D::remove_point);
     ClassDB::bind_method(D_METHOD("disable_point_by_position", "position", "disabled"), &ThetaStar3D::disable_point_by_position, DEFVAL(true));
@@ -468,7 +468,6 @@ void ThetaStar3D::_bind_methods() {
     GDVIRTUAL_BIND(_hash_position, "position");
     GDVIRTUAL_BIND(_compute_edge_cost, "from", "to");
     GDVIRTUAL_BIND(_estimate_edge_cost, "from", "to");
-
 
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR3I, "_dimensions"), "", "get_dimensions");
 }
@@ -716,9 +715,9 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     int32_t distance_y = to_y - from_y;
     int32_t distance_z = to_z - from_z;
 
-    int32_t sign_x = 1;
-    int32_t sign_y = 1;
-    int32_t sign_z = 1;
+    int32_t sign_x = 0;
+    int32_t sign_y = 0;
+    int32_t sign_z = 0;
 
     bool no_collision = true;
     // bool small_axes_arrived = false;
@@ -726,16 +725,22 @@ bool ThetaStar3D::_has_line_of_sight(Vector3i from, Vector3i to) {
     if (distance_x < 0) {
         distance_x = -distance_x;
         sign_x = -1;
+    } else if (distance_x > 0) {
+        sign_x = 1;
     }
 
     if (distance_y < 0) {
         distance_y = -distance_y;
         sign_y = -1;
+    } else if (distance_y > 0) {
+        sign_y = 1;
     }
 
     if (distance_z < 0) {
         distance_z = -distance_z;
         sign_z = -1;
+    } else if (distance_z > 0) {
+        sign_z = 1;
     }
 
     // we are moving farthest along x axis
