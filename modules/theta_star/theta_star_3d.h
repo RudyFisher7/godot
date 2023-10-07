@@ -22,7 +22,7 @@ class ThetaStar3D: public RefCounted {
 
 
 protected:
-    Vector3i dimensions = Vector3i(1, 1, 1);
+    Vector3i _dimensions = Vector3i(1, 1, 1);
     OAHashMap<int64_t, Point<Vector3i>*> _points;
     int64_t number_of_disabled_points = 0;
     uint8_t closed_counter = 0u;
@@ -58,7 +58,7 @@ public:
     TypedArray<Vector3i> get_point_path_from_positions(const Vector3i from, const Vector3i to);
     PackedInt64Array get_id_path_from_ids(const int64_t from, const int64_t to);
     TypedArray<Vector3i> get_point_path_from_ids(const int64_t from, const int64_t to);
-    TypedArray<Vector3> get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to);
+    TypedArray<Vector3> get_point_path_from_off_graph_positions(const Vector3 from, const Vector3 to);
 
     bool add_point(const Vector3i position);
     bool remove_point(const Vector3i position); //todo:: unit test for sure
@@ -76,6 +76,7 @@ protected:
 
     bool _connect_points(const int64_t from_id, const int64_t to_id, const bool bidirectional = false);
     Point<Vector3i>* _get_closest_point_toward(const Vector3 from, const Vector3 to);
+    Vector3i _get_closest_position_toward(const Vector3 from, const Vector3 to) const;
 
     void _get_point_path(Point<Vector3i>* const from, Point<Vector3i>* const to, LocalVector<const Point<Vector3i>*>& outPath);
     void _expand_point(Point<Vector3i>* const point, const Point<Vector3i>* const to, LocalVector<Point<Vector3i>*>& open, SortArray<Point<Vector3i>*, Point<Vector3i>::Comparator>& sorter);
@@ -92,7 +93,8 @@ protected:
     GDVIRTUAL2RC(real_t, _compute_edge_cost, int64_t, int64_t)
 	GDVIRTUAL2RC(real_t, _estimate_edge_cost, int64_t, int64_t)
 
-    bool _is_position_valid(const Vector3i position, bool warn = false) const;
+    bool _is_position_valid(const Vector3i position, const bool warn = false) const;
+    virtual Vector3i _get_minimum_dimensions() const;
 };
 
 };

@@ -29,15 +29,15 @@ void ThetaStar3D::clear() {
 
 
 Vector3i ThetaStar3D::get_dimensions() const {
-    return dimensions;
+    return _dimensions;
 }
 
 
 int64_t ThetaStar3D::get_size() const {
     int64_t result = 0;
-    result = static_cast<int64_t>(dimensions.x);
-    result *= static_cast<int64_t>(dimensions.y);
-    result *= static_cast<int64_t>(dimensions.z);
+    result = static_cast<int64_t>(_dimensions.x);
+    result *= static_cast<int64_t>(_dimensions.y);
+    result *= static_cast<int64_t>(_dimensions.z);
     return result;
 }
 
@@ -274,7 +274,7 @@ TypedArray<Vector3i> ThetaStar3D::get_point_path_from_ids(const int64_t from, co
 }
 
 
-TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_grid_positions(const Vector3 from, const Vector3 to) {
+TypedArray<Vector3> ThetaStar3D::get_point_path_from_off_graph_positions(const Vector3 from, const Vector3 to) {
     TypedArray<Vector3> result;
     LocalVector<const Point<Vector3i>*> result_points;
     bool is_from_valid = false;
@@ -470,7 +470,7 @@ void ThetaStar3D::_bind_methods() {
     GDVIRTUAL_BIND(_estimate_edge_cost, "from", "to");
 
 
-    ADD_PROPERTY(PropertyInfo(Variant::VECTOR3I, "dimensions"), "", "get_dimensions");
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR3I, "_dimensions"), "", "get_dimensions");
 }
 
 
@@ -514,22 +514,39 @@ bool ThetaStar3D::_connect_points(const int64_t from_id, const int64_t to_id, co
 
 Point<Vector3i>* ThetaStar3D::_get_closest_point_toward(const Vector3 from, const Vector3 to) {
     Point<Vector3i>* result = nullptr;
-    Vector3i from_rounded;
+    Vector3i from_on_graph;
     int64_t from_id = -1;
     Vector3 direction_to = from.direction_to(to);
 
-    // todo:: handle the case where point is out of bounds, so get the border point with 3d intersection check.
-    from_rounded.x = direction_to.x > 0.0 ? ceilf(from.x) : floorf(from.x);
-    from_rounded.y = direction_to.y > 0.0 ? ceilf(from.y) : floorf(from.y);
-    from_rounded.z = direction_to.z > 0.0 ? ceilf(from.z) : floorf(from.z);
+    from_on_graph = _get_closest_position_toward(from, to);
 
-    if (_is_position_valid(from_rounded, true)) {
-        from_id = _hash_position(from_rounded);
+    from_id = _hash_position(from_on_graph);
 
-        if (!_points.lookup(from_id, result)) {
-            ERR_FAIL_COND_V_MSG(result == nullptr, result, vformat("Off-grid position too far from grid to find closest position. off-grid position = %v, rounded position = %v", from, from_rounded));
+    ERR_FAIL_COND_V_MSG(!_points.lookup(from_id, result), result, vformat("Off-graph position too far from graph to find closest position. off-graph position = %v, rounded position = %v", from, from_on_graph));
+
+    return result;
+}
+
+
+Vector3i ThetaStar3D::_get_closest_position_toward(const Vector3 from, const Vector3 to) const
+{
+    Vector3i result;
+    Vector3 resultf;
+    Vector3 max = Vector3(_dimensions) - Vector3(1.0, 1.0, 1.0);
+    Vector3 min = _get_minimum_dimensions();
+    Vector3 direction_to = from.direction_to(to);
+
+    for (size_t i = 0; i < Vector3::AXIS_COUNT; i++) {
+        if (from[i] > max[i]) {
+            resultf[i] = max[i];
+        } else if (from[i] < min[i]) {
+            resultf[i] = min[i];
+        } else {
+            resultf[i] = direction_to[i] > 0.0 ? ceilf(from[i]) : floorf(from[i]);
         }
     }
+
+    result = Vector3i(resultf);
 
     return result;
 }
@@ -904,25 +921,22 @@ real_t ThetaStar3D::_compute_edge_cost(int64_t from, int64_t to) {
         return result;
     }
 
-    int32_t unweighted_result = 0;
-
     Point<Vector3i>* from_point;
     Point<Vector3i>* to_point;
 
     _points.lookup(from, from_point);
     _points.lookup(to, to_point);
 
-    unweighted_result = abs(from_point->position.x - to_point->position.x);
-    unweighted_result += abs(from_point->position.y - to_point->position.y);
-    unweighted_result += abs(from_point->position.z - to_point->position.z);
+    Vector3 from_position = Vector3(from_point->position);
+    Vector3 to_position = Vector3(to_point->position);
 
-    result = static_cast<real_t>(unweighted_result);
+    result = from_position.distance_to(to_position);
 
     return result;
 }
 
 
-real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) { // todo:: this is too accurate I think
+real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) {
     real_t result = 0.0;
 
     if (GDVIRTUAL_CALL(_estimate_edge_cost, from, to, result)) {
@@ -946,15 +960,24 @@ real_t ThetaStar3D::_estimate_edge_cost(int64_t from, int64_t to) { // todo:: th
 
 bool ThetaStar3D::_is_position_valid(const Vector3i position, bool warn) const {
     bool result = false;
-    Vector3i min = Vector3i(0, 0, 0);
-    Vector3i max = dimensions - Vector3i(1, 1, 1);
+    Vector3i max = _dimensions - Vector3i(1, 1, 1);
+    Vector3i min = _get_minimum_dimensions();
     Vector3i clamped_position = position.clamp(min, max);
     
     result = position == clamped_position;
 
     if (warn) {
-        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's position must be within dimensions. position = %v", position));
+        ERR_FAIL_COND_V_MSG(!result, result, vformat("Point's position must be within _dimensions. position = %v", position));
     }
+
+    return result;
+}
+
+
+Vector3i ThetaStar3D::_get_minimum_dimensions() const {
+    Vector3i result;
+
+    result = -_dimensions + Vector3i(1, 1, 1);
 
     return result;
 }

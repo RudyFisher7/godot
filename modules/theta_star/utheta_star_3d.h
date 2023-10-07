@@ -33,6 +33,7 @@ protected:
     void _build_default_neighbors(TypedArray<Vector3i>& out_neighbors) const;
     void _connect_bidirectional_neighbors_in_grid(Point<Vector3i>* const from_point, const TypedArray<Vector3i>& in_neighbors);
     int64_t _hash_position(Vector3i position) override;
+    Vector3i _get_minimum_dimensions() const override;
 };
 
 };

@@ -18,12 +18,12 @@ UThetaStar3D::UThetaStar3D() { // todo:: inheritance stuff
 
 
 UThetaStar3D::UThetaStar3D(const Vector3i in_dimensions, const bool reserve) {
-    ERR_FAIL_COND_MSG(!UThetaStar3D::_are_dimensions_valid(in_dimensions), vformat("UThetaStar3D's dimensions must be set to a Vector with all positive values. dimensions = %v", in_dimensions));
+    ERR_FAIL_COND_MSG(!UThetaStar3D::_are_dimensions_valid(in_dimensions), vformat("UThetaStar3D's _dimensions must be set to a Vector with all positive values. _dimensions = %v", in_dimensions));
     
-    dimensions = in_dimensions;
+    _dimensions = in_dimensions;
 
     if (reserve) {
-        uint32_t capacity = dimensions.x * dimensions.y * dimensions.z;
+        uint32_t capacity = _dimensions.x * _dimensions.y * _dimensions.z;
 
         if (capacity > _points.get_capacity()) {
             _points.reserve(capacity);
@@ -38,9 +38,9 @@ UThetaStar3D::~UThetaStar3D() {
 
 
 void UThetaStar3D::build_bidirectional_grid(TypedArray<Vector3i> in_neighbors) {
-    for (int32_t x = 0; x < dimensions.x; x++) {
-        for (int32_t y = 0; y < dimensions.y; y++) {
-            for (int32_t z = 0; z < dimensions.z; z++) {
+    for (int32_t x = 0; x < _dimensions.x; x++) {
+        for (int32_t y = 0; y < _dimensions.y; y++) {
+            for (int32_t z = 0; z < _dimensions.z; z++) {
                 add_point(Vector3i(x, y, z));
             }
         }
@@ -102,9 +102,14 @@ void UThetaStar3D::_connect_bidirectional_neighbors_in_grid(Point<Vector3i>* con
 int64_t UThetaStar3D::_hash_position(Vector3i position) {
     int64_t result = 0;
 
-    result = position.x + (dimensions.x * position.y) + (dimensions.x * dimensions.y * position.z);
+    result = position.x + (_dimensions.x * position.y) + (_dimensions.x * _dimensions.y * position.z);
 
     return result;
+}
+
+
+Vector3i UThetaStar3D::_get_minimum_dimensions() const {
+    return Vector3i(0, 0, 0);
 }
 
 };
