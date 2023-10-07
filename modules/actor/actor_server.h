@@ -5,6 +5,8 @@
 #include "core/object/object.h"
 #include "core/os/thread.h"
 #include "core/os/mutex.h"
+#include "core/templates/rid.h"
+#include "core/variant/variant.h"
 
 
 class ActorServer : public Object {
@@ -12,15 +14,32 @@ class ActorServer : public Object {
 
 private:
     static ActorServer* singleton;
-    static void thread_function(ActorServer* instance);
-private:
+
     bool thread_exited = false;
     mutable bool exit_thread = false;
-    Thread* thread;
-    Mutex* mutex;
+    Thread* thread = nullptr;
+    Mutex* mutex = nullptr;
+
+
 public:
     ActorServer();
     ~ActorServer();
+
+    static ActorServer* get_singleton();
+
+    Error init();
+    void lock();
+    void unlock();
+    void finish();
+
+
+protected:
+    static void _bind_methods();
+
+
+private:
+    static void thread_function(void* instance);
+
 };
 
 
