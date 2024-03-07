@@ -79,6 +79,7 @@
 #include "servers/rendering/rendering_server_default.h"
 #include "servers/text/text_server_dummy.h"
 #include "servers/text_server.h"
+#include "servers/voxel_navigation_server.h"
 #include "servers/xr_server.h"
 
 #ifdef TESTS_ENABLED
@@ -151,6 +152,7 @@ static PhysicsServer2DManager *physics_server_2d_manager = nullptr;
 static PhysicsServer2D *physics_server_2d = nullptr;
 static NavigationServer3D *navigation_server_3d = nullptr;
 static NavigationServer2D *navigation_server_2d = nullptr;
+static VoxelNavigationServer *voxel_navigation_server = nullptr;//rudy todo::
 static ThemeDB *theme_db = nullptr;
 // We error out if setup2() doesn't turn this true
 static bool _start_success = false;
@@ -2726,6 +2728,10 @@ Error Main::setup2() {
 
 	initialize_physics();
 	initialize_navigation_server();
+
+	voxel_navigation_server = memnew(VoxelNavigationServer);//rudy todo::
+	voxel_navigation_server->init();
+
 	register_server_singletons();
 
 	// This loads global classes, so it must happen before custom loaders and savers are registered
@@ -3865,6 +3871,12 @@ void Main::cleanup(bool p_force) {
 	if (physics_server_2d_manager) {
 		memdelete(physics_server_2d_manager);
 	}
+
+	if (voxel_navigation_server) {//rudy todo::
+		voxel_navigation_server->finish();
+		memdelete(voxel_navigation_server);
+	}
+
 	if (globals) {
 		memdelete(globals);
 	}

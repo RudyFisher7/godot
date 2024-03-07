@@ -80,6 +80,7 @@
 #include "text/text_server_dummy.h"
 #include "text/text_server_extension.h"
 #include "text_server.h"
+#include "voxel_navigation_server.h"
 #include "xr/xr_interface.h"
 #include "xr/xr_interface_extension.h"
 #include "xr/xr_positional_tracker.h"
@@ -169,6 +170,7 @@ void register_server_types() {
 	GDREGISTER_CLASS(NavigationPathQueryParameters3D);
 	GDREGISTER_CLASS(NavigationPathQueryResult2D);
 	GDREGISTER_CLASS(NavigationPathQueryResult3D);
+	GDREGISTER_CLASS(VoxelNavigationServer);
 
 	GDREGISTER_CLASS(XRServer);
 	GDREGISTER_CLASS(CameraServer);
@@ -310,6 +312,7 @@ void register_server_singletons() {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("PhysicsServer3D", PhysicsServer3D::get_singleton(), "PhysicsServer3D"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer2D", NavigationServer2D::get_singleton(), "NavigationServer2D"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer3D", NavigationServer3D::get_singleton(), "NavigationServer3D"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("VoxelNavigationServer", VoxelNavigationServer::get_singleton(), "VoxelNavigationServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("XRServer", XRServer::get_singleton(), "XRServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("CameraServer", CameraServer::get_singleton(), "CameraServer"));
 }

@@ -16,6 +16,7 @@ SConscript("debugger/SCsub")
 SConscript("extensions/SCsub")
 SConscript("movie_writer/SCsub")
 SConscript("navigation/SCsub")
+# SConscript("voxel_navigation/SCsub") #rudy todo::
 
 lib = env.add_library("servers", env.servers_sources)
 
