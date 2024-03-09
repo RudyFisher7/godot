@@ -8,8 +8,7 @@
 #include "core/object/class_db.h"
 #include "core/config/engine.h"
 
-#include "include/voxel_navigation/voxel_grid.h"
-
+#include "include/voxel_navigation/voxel_navigation_region.h"
 
 void register_voxel_navigation_types() {
 	ClassDB::register_class<VoxelNavigation::VoxelGrid>();

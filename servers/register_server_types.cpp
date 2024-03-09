@@ -80,8 +80,8 @@
 #include "text/text_server_dummy.h"
 #include "text/text_server_extension.h"
 #include "text_server.h"
+#include "voxel_navigation/voxel_navigation_region.h"
 #include "voxel_navigation_server.h" //rudy todo::
-#include "voxel_navigation/voxel_grid.h"
 #include "xr/xr_interface.h"
 #include "xr/xr_interface_extension.h"
 #include "xr/xr_positional_tracker.h"
@@ -172,7 +172,7 @@ void register_server_types() {
 	GDREGISTER_CLASS(NavigationPathQueryResult2D);
 	GDREGISTER_CLASS(NavigationPathQueryResult3D);
 	GDREGISTER_CLASS(VoxelNavigationServer);//rudy todo::
-	GDREGISTER_CLASS(VoxelNavigation::VoxelGrid);//rudy todo::
+	GDREGISTER_CLASS(VoxelNavigation::VoxelNavigationRegion);//rudy todo::
 
 	GDREGISTER_CLASS(XRServer);
 	GDREGISTER_CLASS(CameraServer);
