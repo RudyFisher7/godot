@@ -8,27 +8,13 @@
 #include "core/object/class_db.h"
 #include "core/config/engine.h"
 
-#include "servers/voxel_navigation_server.h"
-#include "servers/voxel_navigation_server_dummy.h"
+#include "include/voxel_navigation/voxel_grid.h"
 
-static VoxelNavigationServer *voxel_navigation_server = nullptr;
-static VoxelNavigationServerDummy *_voxel_navigation_server = nullptr;
 
-void register_voxel_navigation_server_types() {
-	voxel_navigation_server = memnew(VoxelNavigationServer);
-	voxel_navigation_server->init();
-	_voxel_navigation_server = memnew(VoxelNavigationServerDummy);
-	ClassDB::register_class<VoxelNavigationServerDummy>();
-	Engine::get_singleton()->add_singleton(Engine::Singleton("VoxelNavigationServer", VoxelNavigationServerDummy::get_singleton()));
+void register_voxel_navigation_types() {
+	ClassDB::register_class<VoxelNavigation::VoxelGrid>();
 }
 
-void unregister_voxel_navigation_server_types() {
-	if (voxel_navigation_server) {
-		voxel_navigation_server->finish();
-		memdelete(voxel_navigation_server);
-	}
+void unregister_voxel_navigation_types() {
 
-	if (_voxel_navigation_server) {
-		memdelete(_voxel_navigation_server);
-	}
 }
