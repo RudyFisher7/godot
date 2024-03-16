@@ -2,8 +2,8 @@
 // Created by rfish on 3/8/2024.
 //
 
-#ifndef VOXEL_NAVIGATION_VOXEL_GRID_H
-#define VOXEL_NAVIGATION_VOXEL_GRID_H
+#ifndef VOXEL_NAVIGATION_REGION_H
+#define VOXEL_NAVIGATION_REGION_H
 
 
 #include "core/object/class_db.h"
@@ -39,6 +39,6 @@ public:
 	void init(Vector3i in_dimensions);
 };
 
-} //namespace VoxelNavigation
+} // namespace VoxelNavigation
 
-#endif //VOXEL_NAVIGATION_VOXEL_GRID_H
+#endif // VOXEL_NAVIGATION_REGION_H
