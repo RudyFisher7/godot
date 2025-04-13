@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "editor/add_component_dialog.h"
 #include "editor/add_metadata_dialog.h"
 #include "editor_property_name_processor.h"
 #include "scene/gui/box_container.h"
@@ -658,10 +659,18 @@ class EditorInspector : public ScrollContainer {
 
 	bool _is_property_disabled_by_feature_profile(const StringName &p_property);
 
+	AddComponentDialog *add_component_dialog = nullptr;
+	LineEdit *add_component_name = nullptr;
+	OptionButton *add_component_type = nullptr;
+	EditorValidationPanel *component_validation_panel = nullptr;
+
 	AddMetadataDialog *add_meta_dialog = nullptr;
 	LineEdit *add_meta_name = nullptr;
 	OptionButton *add_meta_type = nullptr;
 	EditorValidationPanel *validation_panel = nullptr;
+
+	void _add_component_confirm();
+	void _show_add_component_dialog();
 
 	void _add_meta_confirm();
 	void _show_add_meta_dialog();
