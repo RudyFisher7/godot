@@ -660,7 +660,6 @@ class EditorInspector : public ScrollContainer {
 	bool _is_property_disabled_by_feature_profile(const StringName &p_property);
 
 	AddComponentDialog *add_component_dialog = nullptr;
-	LineEdit *add_component_name = nullptr;
 	OptionButton *add_component_type = nullptr;
 	EditorValidationPanel *component_validation_panel = nullptr;
 
