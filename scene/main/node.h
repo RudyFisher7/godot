@@ -31,8 +31,11 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include "core/io/resource.h"
 #include "core/string/node_path.h"
+#include "core/templates/hash_set.h"
 #include "core/variant/typed_array.h"
+#include "scene/main/actor.h"
 #include "scene/main/scene_tree.h"
 #include "scene/scene_string_names.h"
 
@@ -45,8 +48,8 @@ class PropertyTweener;
 SAFE_FLAG_TYPE_PUN_GUARANTEES
 SAFE_NUMERIC_TYPE_PUN_GUARANTEES(uint32_t)
 
-class Node : public Object {
-	GDCLASS(Node, Object);
+class Node : public Actor {
+	GDCLASS(Node, Actor);
 
 protected:
 	// During group processing, these are thread-safe.
@@ -450,6 +453,11 @@ public:
 		NOTIFICATION_SUSPENDED = 9003,
 		NOTIFICATION_UNSUSPENDED = 9004
 	};
+
+	/* ACTOR/COMPONENT */
+
+	void set_component(Ref<Component> value) override;
+	void remove_component(StringName component_class) override;
 
 	/* NODE/TREE */
 

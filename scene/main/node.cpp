@@ -53,10 +53,12 @@ void Node::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_PROCESS: {
 			GDVIRTUAL_CALL(_process, get_process_delta_time());
+			call_components_process(get_process_delta_time());
 		} break;
 
 		case NOTIFICATION_PHYSICS_PROCESS: {
 			GDVIRTUAL_CALL(_physics_process, get_physics_process_delta_time());
+			call_components_physics_process(get_physics_process_delta_time());
 		} break;
 
 		case NOTIFICATION_ENTER_TREE: {
@@ -201,28 +203,31 @@ void Node::_notification(int p_notification) {
 		} break;
 
 		case NOTIFICATION_READY: {
-			if (GDVIRTUAL_IS_OVERRIDDEN(_input)) {
+			if (GDVIRTUAL_IS_OVERRIDDEN(_input) || !_input_group.is_empty()) {
 				set_process_input(true);
 			}
 
-			if (GDVIRTUAL_IS_OVERRIDDEN(_shortcut_input)) {
+			if (GDVIRTUAL_IS_OVERRIDDEN(_shortcut_input) || !_shortcut_input_group.is_empty()) {
 				set_process_shortcut_input(true);
 			}
 
-			if (GDVIRTUAL_IS_OVERRIDDEN(_unhandled_input)) {
+			if (GDVIRTUAL_IS_OVERRIDDEN(_unhandled_input) || !_unhandled_input_group.is_empty()) {
 				set_process_unhandled_input(true);
 			}
 
-			if (GDVIRTUAL_IS_OVERRIDDEN(_unhandled_key_input)) {
+			if (GDVIRTUAL_IS_OVERRIDDEN(_unhandled_key_input) || !_unhandled_key_input_group.is_empty()) {
 				set_process_unhandled_key_input(true);
 			}
 
-			if (GDVIRTUAL_IS_OVERRIDDEN(_process)) {
+			if (GDVIRTUAL_IS_OVERRIDDEN(_process) || !_process_group.is_empty()) {
 				set_process(true);
 			}
-			if (GDVIRTUAL_IS_OVERRIDDEN(_physics_process)) {
+
+			if (GDVIRTUAL_IS_OVERRIDDEN(_physics_process) || !_physics_process_group.is_empty()) {
 				set_physics_process(true);
 			}
+
+			call_components_ready();
 
 			GDVIRTUAL_CALL(_ready);
 		} break;
@@ -309,6 +314,8 @@ void Node::_propagate_enter_tree() {
 
 	GDVIRTUAL_CALL(_enter_tree);
 
+	call_components_enter_tree();
+
 	emit_signal(SceneStringName(tree_entered));
 
 	data.tree->node_added(this);
@@ -385,6 +392,8 @@ void Node::_propagate_exit_tree() {
 	data.blocked--;
 
 	GDVIRTUAL_CALL(_exit_tree);
+
+	call_components_exit_tree();
 
 	emit_signal(SceneStringName(tree_exiting));
 
@@ -1379,6 +1388,69 @@ void Node::_propagate_translation_domain_dirty() {
 		}
 	}
 	notification(NOTIFICATION_TRANSLATION_CHANGED);
+}
+void Node::set_component(Ref<Component> value) {
+	Actor::set_component(value);
+
+	Engine *engine = Engine::get_singleton();
+
+	if (!engine->is_editor_hint()) {
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_input) && !_input_group.is_empty()) {
+			set_process_input(true);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_shortcut_input) && !_shortcut_input_group.is_empty()) {
+			set_process_shortcut_input(true);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_unhandled_input) && !_unhandled_input_group.is_empty()) {
+			set_process_unhandled_input(true);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_unhandled_key_input) && !_unhandled_key_input_group.is_empty()) {
+			set_process_unhandled_key_input(true);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_process) && !_process_group.is_empty()) {
+			set_process(true);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_physics_process) && !_physics_process_group.is_empty()) {
+			set_physics_process(true);
+		}
+	}
+}
+
+void Node::remove_component(StringName component_class) {
+	Actor::remove_component(component_class);
+
+	Engine *engine = Engine::get_singleton();
+
+	if (!engine->is_editor_hint()) {
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_input) && _input_group.is_empty()) {
+			set_process_input(false);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_shortcut_input) && _shortcut_input_group.is_empty()) {
+			set_process_shortcut_input(false);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_unhandled_input) && _unhandled_input_group.is_empty()) {
+			set_process_unhandled_input(false);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_unhandled_key_input) && _unhandled_key_input_group.is_empty()) {
+			set_process_unhandled_key_input(false);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_process) && _process_group.is_empty()) {
+			set_process(false);
+		}
+
+		if (!GDVIRTUAL_IS_OVERRIDDEN(_physics_process) && _physics_process_group.is_empty()) {
+			set_physics_process(false);
+		}
+	}
 }
 
 StringName Node::get_name() const {
@@ -3461,6 +3533,14 @@ void Node::request_ready() {
 
 void Node::_call_input(const Ref<InputEvent> &p_event) {
 	if (p_event->get_device() != InputEvent::DEVICE_ID_INTERNAL) {
+		if (call_components_input(p_event)) {
+			get_viewport()->set_input_as_handled();
+		}
+
+		if (get_viewport()->is_input_handled()) {
+			return;
+		}
+
 		GDVIRTUAL_CALL(_input, p_event);
 	}
 	if (!is_inside_tree() || !get_viewport() || get_viewport()->is_input_handled()) {
@@ -3471,6 +3551,13 @@ void Node::_call_input(const Ref<InputEvent> &p_event) {
 
 void Node::_call_shortcut_input(const Ref<InputEvent> &p_event) {
 	if (p_event->get_device() != InputEvent::DEVICE_ID_INTERNAL) {
+		if (call_components_shortcut_input(p_event)) {
+			get_viewport()->set_input_as_handled();
+		}
+
+		if (get_viewport()->is_input_handled()) {
+			return;
+		}
 		GDVIRTUAL_CALL(_shortcut_input, p_event);
 	}
 	if (!is_inside_tree() || !get_viewport() || get_viewport()->is_input_handled()) {
@@ -3481,6 +3568,13 @@ void Node::_call_shortcut_input(const Ref<InputEvent> &p_event) {
 
 void Node::_call_unhandled_input(const Ref<InputEvent> &p_event) {
 	if (p_event->get_device() != InputEvent::DEVICE_ID_INTERNAL) {
+		if (call_components_unhandled_input(p_event)) {
+			get_viewport()->set_input_as_handled();
+		}
+
+		if (get_viewport()->is_input_handled()) {
+			return;
+		}
 		GDVIRTUAL_CALL(_unhandled_input, p_event);
 	}
 	if (!is_inside_tree() || !get_viewport() || get_viewport()->is_input_handled()) {
@@ -3491,6 +3585,13 @@ void Node::_call_unhandled_input(const Ref<InputEvent> &p_event) {
 
 void Node::_call_unhandled_key_input(const Ref<InputEvent> &p_event) {
 	if (p_event->get_device() != InputEvent::DEVICE_ID_INTERNAL) {
+		if (call_components_unhandled_key_input(p_event)) {
+			get_viewport()->set_input_as_handled();
+		}
+
+		if (get_viewport()->is_input_handled()) {
+			return;
+		}
 		GDVIRTUAL_CALL(_unhandled_key_input, p_event);
 	}
 	if (!is_inside_tree() || !get_viewport() || get_viewport()->is_input_handled()) {
